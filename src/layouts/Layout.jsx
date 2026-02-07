@@ -82,15 +82,15 @@ export default function Layout() {
                 "bg-white text-oxford sticky top-0 z-50 transition-all duration-300",
                 isScrolled ? "shadow-lg backdrop-blur-xl bg-white/70" : "shadow-sm bg-white/90 backdrop-blur-sm"
             )}>
-                <div className="container-wide h-14 sm:h-20 flex items-center justify-between">
+                <div className="container-wide h-12 sm:h-16 flex items-center justify-between">
                     <div className="flex items-center">
-                        <div className="flex items-center space-x-2 sm:space-x-4 cursor-pointer group" onClick={() => navigate('/')}>
-                            <div className="p-1 sm:p-1.5 bg-white rounded-xl shadow-lg border-2 border-oxford flex items-center justify-center">
-                                <img src="/clg-logo.png" alt="Logo" className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
+                        <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
+                            <div className="p-1 sm:p-1.5 bg-white rounded-lg shadow-lg border-2 border-oxford flex items-center justify-center">
+                                <img src="/clg-logo.png" alt="Logo" className="w-6 h-6 sm:w-10 sm:h-10 object-contain" />
                             </div>
                             <div className="space-y-0.5">
-                                <h1 className="text-base sm:text-3xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h1>
-                                <p className="text-[7px] sm:text-[10px] font-black uppercase opacity-40 tracking-[0.2em]">Stella Mary's College of Engineering</p>
+                                <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h1>
+                                <p className="text-[6px] sm:text-[8px] font-black uppercase opacity-40 tracking-[0.2em]">Stella Mary's College of Engineering</p>
                             </div>
                         </div>
                     </div>
@@ -245,7 +245,7 @@ export default function Layout() {
             )}
             {/* Global Sub-Header Back Icon Bar */}
             {location.pathname !== '/' && (
-                <div className="container-wide pt-4 sm:pt-6 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-500">
                     <button
                         onClick={() => navigate('/')}
                         className="p-2 sm:p-3 bg-oxford/5 rounded-xl sm:rounded-2xl text-oxford/40 hover:text-oxford hover:bg-oxford/10 transition-all active:scale-90 group inline-flex items-center justify-center shadow-sm border border-oxford/5"
@@ -257,15 +257,15 @@ export default function Layout() {
             )}
 
             {/* Main Content with Responsive Spacer */}
-            <main className={cn("flex-1 container-wide py-8 sm:py-16 lg:py-20", isStrictAuthPage && "flex items-center justify-center")}>
+            <main className={cn("flex-1 container-wide py-4 sm:py-8", isStrictAuthPage && "flex items-center justify-center")}>
                 <Outlet />
             </main>
 
             {/* Footer - Hidden on Auth Pages to keep focus */}
             {!isStrictAuthPage && (
-                <footer className="bg-oxford text-white pt-10 pb-6 mt-10">
+                <footer className="bg-oxford text-white pt-6 pb-4 mt-6">
                     <div className="container-wide">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10 pb-10 border-b border-white/10">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 pb-6 border-b border-white/10">
                             <div className="col-span-1 md:col-span-2 space-y-4">
                                 <div className="flex items-center space-x-3">
                                     <div className="p-1.5 bg-white rounded-lg">
