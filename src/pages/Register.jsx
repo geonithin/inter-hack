@@ -218,7 +218,7 @@ export default function Register() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto mt-8 mb-16 px-4 px-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
+        <div className="max-w-5xl mx-auto mt-8 mb-16 px-4 px-6 animate-in fade-in slide-in-from-bottom-6 duration-300">
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl oxford-edge border-4">
                 {/* Header */}
                 <div className="bg-oxford p-4 sm:p-6 text-white flex items-center justify-between">

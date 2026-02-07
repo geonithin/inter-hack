@@ -13,13 +13,20 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Handle scroll effect for navbar
+    // Handle scroll effect for navbar - throttled for performance
     useEffect(() => {
+        let ticking = false;
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    setIsScrolled(window.scrollY > 20);
+                    ticking = false;
+                });
+                ticking = true;
+            }
         };
 
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -79,7 +86,7 @@ export default function Layout() {
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header - Now Global */}
             <header className={cn(
-                "bg-white text-oxford sticky top-0 z-50 transition-all duration-300",
+                "bg-white text-oxford sticky top-0 z-50 transition-all duration-150",
                 isScrolled ? "shadow-lg backdrop-blur-xl bg-white/70" : "shadow-sm bg-white/90 backdrop-blur-sm"
             )}>
                 <div className="container-wide h-12 sm:h-16 flex items-center justify-between">
@@ -101,6 +108,7 @@ export default function Layout() {
                             <button onClick={() => navigate('/')} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Home</button>
                             <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('rules')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Rules</button>
                             <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('guidelines')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Guidelines</button>
+                            <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Contact</button>
                             <button onClick={handleDashboardAccess} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">
                                 {userRole === 'faculty' ? 'Faculty Portal' : 'Dashboard'}
                             </button>
@@ -156,11 +164,11 @@ export default function Layout() {
                 <div className="lg:hidden fixed inset-0 z-[60]">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 backdrop-blur-xl animate-in fade-in duration-300"
+                        className="absolute inset-0 backdrop-blur-xl animate-in fade-in duration-150"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
                     {/* Floating Mini Menu Card */}
-                    <div className="absolute top-4 right-4 w-[80%] max-w-[260px] bg-oxford p-4 rounded-[2rem] flex flex-col shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-300 border-2 border-white/10">
+                    <div className="absolute top-4 right-4 w-[80%] max-w-[260px] bg-oxford p-4 rounded-[2rem] flex flex-col shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-200 border-2 border-white/10">
                         <div className="flex justify-between items-center mb-6 pb-3 border-b border-white/5">
                             <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Menu</p>
                             <button className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all" onClick={() => setIsMobileMenuOpen(false)}>
@@ -174,6 +182,27 @@ export default function Layout() {
                             >
                                 <div className="w-1 h-1 bg-white/20 rounded-full" />
                                 Home
+                            </button>
+                            <button
+                                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('rules')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
+                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                            >
+                                <div className="w-1 h-1 bg-white/20 rounded-full" />
+                                Rules
+                            </button>
+                            <button
+                                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('guidelines')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
+                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                            >
+                                <div className="w-1 h-1 bg-white/20 rounded-full" />
+                                Guidelines
+                            </button>
+                            <button
+                                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
+                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                            >
+                                <div className="w-1 h-1 bg-white/20 rounded-full" />
+                                Contact
                             </button>
 
                             {/* Dynamic Menu Items based on Auth State */}
@@ -245,7 +274,7 @@ export default function Layout() {
             )}
             {/* Global Sub-Header Back Icon Bar */}
             {location.pathname !== '/' && (
-                <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-200">
                     <button
                         onClick={() => navigate('/')}
                         className="p-2 sm:p-3 bg-oxford/5 rounded-xl sm:rounded-2xl text-oxford/40 hover:text-oxford hover:bg-oxford/10 transition-all active:scale-90 group inline-flex items-center justify-center shadow-sm border border-oxford/5"

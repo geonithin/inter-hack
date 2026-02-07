@@ -5,7 +5,7 @@ export default function Landing() {
     const navigate = useNavigate();
 
     return (
-        <div className="flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-700">
+        <div className="flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             <div className="space-y-4 max-w-5xl">
                 <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85] mb-4">
                     Stella Mary's <br />

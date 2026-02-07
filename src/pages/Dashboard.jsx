@@ -104,7 +104,7 @@ export default function Dashboard() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-500">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-200">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 sm:border-8 border-oxford border-t-transparent rounded-full animate-spin" />
                 <p className="text-oxford font-black uppercase tracking-[0.2em] text-xs sm:text-sm">Loading Project tracks...</p>
             </div>
@@ -113,7 +113,7 @@ export default function Dashboard() {
 
     if (selectedStatement && hasSelected) {
         return (
-            <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-200">
                 <div className="flex items-center justify-between border-b-2 border-oxford pb-4">
                     <div>
                         <h2 className="text-xl sm:text-3xl font-bold text-oxford uppercase tracking-tight">Idea Submission</h2>
@@ -135,7 +135,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-200">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 sm:border-b-4 border-oxford pb-4 sm:pb-6">
                 <div className="space-y-1 sm:space-y-2">
                     <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Project Dashboard</h1>
@@ -260,7 +260,7 @@ export default function Dashboard() {
                             
                             {/* Expandable Content */}
                             {isExpanded && (
-                                <div className="border-t border-oxford/10 p-6 bg-gray-50/30 animate-in slide-in-from-top-2 duration-300">
+                                <div className="border-t border-oxford/10 p-6 bg-gray-50/30 animate-in slide-in-from-top-2 duration-150">
                                     <div className="prose prose-sm max-w-none">
                                         <h4 className="text-oxford font-black uppercase tracking-wide mb-3">Problem Description</h4>
                                         <p className="text-oxford/90 leading-relaxed">

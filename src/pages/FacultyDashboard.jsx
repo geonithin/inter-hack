@@ -304,7 +304,7 @@ export default function FacultyDashboard() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-500">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-200">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 sm:border-8 border-oxford border-t-transparent rounded-full animate-spin" />
                 <p className="text-oxford font-black uppercase tracking-[0.2em] text-xs sm:text-sm">Fetching Team Roster...</p>
             </div>
@@ -313,7 +313,7 @@ export default function FacultyDashboard() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in fade-in duration-200">
                 <div className="p-6 bg-red-50 border-2 border-red-200 rounded-xl max-w-2xl">
                     <div className="flex items-center space-x-3 mb-4">
                         <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -362,7 +362,7 @@ export default function FacultyDashboard() {
     });
 
     return (
-        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-700">
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-4 border-oxford pb-6">
                 <div className="space-y-1">

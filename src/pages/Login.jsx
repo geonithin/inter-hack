@@ -77,7 +77,7 @@ export default function Login() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-[50vh] animate-in zoom-in-95 duration-500">
+        <div className="flex items-center justify-center min-h-[50vh] animate-in zoom-in-95 duration-200">
             <div className="max-w-lg w-full p-4 sm:p-8 oxford-edge rounded-2xl sm:rounded-3xl space-y-6 sm:space-y-8 bg-white shadow-2xl">
                 <div className="text-center space-y-1.5 sm:space-y-3">
                     <h2 className="text-xl sm:text-3xl font-black text-oxford uppercase tracking-tighter">Dashboard Login</h2>
