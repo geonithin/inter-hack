@@ -139,8 +139,8 @@ export default function Layout() {
                     )}
 
                     {/* Mobile Menu Toggle - Always Available Everywhere */}
-                    <button className="lg:hidden p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-gray-50 text-oxford active:scale-95 transition-all border border-gray-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                        {isMobileMenuOpen ? <X className="w-6 h-6 sm:w-8 sm:h-8" /> : <Menu className="w-6 h-6 sm:w-8 sm:h-8" />}
+                    <button className="lg:hidden p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-50 text-oxford active:scale-95 transition-all border border-gray-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                        {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
                     </button>
                 </div>
             </header>
