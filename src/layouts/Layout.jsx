@@ -9,8 +9,19 @@ export default function Layout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [teamName, setTeamName] = useState('Loading...');
+    const [isScrolled, setIsScrolled] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Handle scroll effect for navbar
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Fetch team name for logged in users
     useEffect(() => {
@@ -67,16 +78,34 @@ export default function Layout() {
     return (
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header - Now Global */}
-            <header className="bg-white border-b-4 border-oxford text-oxford sticky top-0 z-50">
-                <div className="container-wide h-14 sm:h-20 flex items-center justify-between">
+            <header className={cn(
+                "bg-white text-oxford sticky top-0 z-50 transition-all duration-300",
+                isScrolled ? "shadow-lg backdrop-blur-md bg-white/95" : "shadow-sm"
+            )}>
+                <div className={cn(
+                    "container-wide flex items-center justify-between transition-all duration-300",
+                    isScrolled ? "h-12 sm:h-16" : "h-14 sm:h-20"
+                )}>
                     <div className="flex items-center">
                         <div className="flex items-center space-x-2 sm:space-x-4 cursor-pointer group" onClick={() => navigate('/')}>
-                            <div className="p-1 sm:p-1.5 bg-white rounded-xl shadow-lg border-2 border-oxford flex items-center justify-center">
-                                <img src="/clg-logo.png" alt="Logo" className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
+                            <div className={cn(
+                                "p-1 sm:p-1.5 bg-white rounded-xl shadow-lg border-2 border-oxford flex items-center justify-center transition-all duration-300",
+                                isScrolled && "scale-90"
+                            )}>
+                                <img src="/clg-logo.png" alt="Logo" className={cn(
+                                    "object-contain transition-all duration-300",
+                                    isScrolled ? "w-6 h-6 sm:w-10 sm:h-10" : "w-8 h-8 sm:w-14 sm:h-14"
+                                )} />
                             </div>
                             <div className="space-y-0.5">
-                                <h1 className="text-base sm:text-3xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h1>
-                                <p className="text-[7px] sm:text-[10px] font-black uppercase opacity-40 tracking-[0.2em]">Stella Mary's College of Engineering</p>
+                                <h1 className={cn(
+                                    "font-black tracking-tighter uppercase leading-none transition-all duration-300",
+                                    isScrolled ? "text-sm sm:text-2xl" : "text-base sm:text-3xl"
+                                )}>SMCE HACKATHON</h1>
+                                <p className={cn(
+                                    "font-black uppercase opacity-40 tracking-[0.2em] transition-all duration-300",
+                                    isScrolled ? "text-[6px] sm:text-[8px]" : "text-[7px] sm:text-[10px]"
+                                )}>Stella Mary's College of Engineering</p>
                             </div>
                         </div>
                     </div>

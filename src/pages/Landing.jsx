@@ -8,9 +8,9 @@ export default function Landing() {
             <div className="space-y-6 max-w-5xl">
                 <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85] mb-4">
                     Stella Mary's <br />
-                    <span className="text-oxford/30 font-black">College of Engineering</span>
+                    <span className="text-oxford/10 font-black">College of Engineering</span>
                 </h1>
-                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/50 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
+                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/30 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
                     Inter-College Hackathon 2026. <br className="hidden sm:block" />
                     Innovate, Collaborate, and Build the Future using Zero-Cost Technologies.
                 </p>
@@ -38,7 +38,6 @@ export default function Landing() {
                     { title: "Notifications", desc: "Get instant updates on selection outcomes, deadlines, and dashboard activity." }
                 ].map((feature, i) => (
                     <div key={i} className="p-4 sm:p-8 oxford-edge rounded-xl sm:rounded-2xl space-y-2 sm:space-y-3 bg-white text-left">
-                        <div className="w-6 sm:w-10 h-1 bg-oxford opacity-20" />
                         <h3 className="text-lg lg:text-2xl font-black text-oxford uppercase tracking-tight">{feature.title}</h3>
                         <p className="text-[10px] lg:text-base text-oxford/60 font-bold leading-relaxed">{feature.desc}</p>
                     </div>
@@ -53,23 +52,23 @@ export default function Landing() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-12">
                     <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 border-l-4 sm:border-l-8 border-oxford bg-oxford/5 rounded-r-xl sm:rounded-r-2xl">
-                            <h4 className="font-black text-base sm:text-xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/70 font-bold">Min 2, Max 5 members per team.</p>
+                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
+                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Min 2, Max 5 members per team.</p>
                         </div>
-                        <div className="p-4 sm:p-8 border-l-4 sm:border-l-8 border-oxford bg-oxford/5 rounded-r-xl sm:rounded-r-2xl">
-                            <h4 className="font-black text-base sm:text-xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/70 font-bold">Complete before the locking period.</p>
+                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
+                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Complete before the locking period.</p>
                         </div>
                     </div>
                     <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 border-l-4 sm:border-l-8 border-oxford bg-oxford/5 rounded-r-xl sm:rounded-r-2xl">
-                            <h4 className="font-black text-base sm:text-xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/70 font-bold">Work on only one problem at a time.</p>
+                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
+                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Work on only one problem at a time.</p>
                         </div>
-                        <div className="p-4 sm:p-8 border-l-4 sm:border-l-8 border-oxford bg-oxford/5 rounded-r-xl sm:rounded-r-2xl">
-                            <h4 className="font-black text-base sm:text-xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/70 font-bold">Original code only. No plagiarism.</p>
+                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
+                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Original code only. No plagiarism.</p>
                         </div>
                     </div>
                 </div>
