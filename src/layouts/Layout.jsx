@@ -263,43 +263,17 @@ export default function Layout() {
 
             {/* Footer - Hidden on Auth Pages to keep focus */}
             {!isStrictAuthPage && (
-                <footer className="bg-oxford text-white pt-6 pb-4 mt-6">
+                <footer className="bg-oxford text-white py-4 mt-6">
                     <div className="container-wide">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 pb-6 border-b border-white/10">
-                            <div className="col-span-1 md:col-span-2 space-y-4">
-                                <div className="flex items-center space-x-3">
-                                    <div className="p-1.5 bg-white rounded-lg">
-                                        <img src="/clg-logo.png" alt="Logo" className="w-10 h-10 object-contain" />
-                                    </div>
-                                    <h2 className="text-2xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h2>
-                                </div>
-                                <p className="text-white/40 text-sm max-w-sm uppercase font-bold leading-relaxed">
-                                    Pioneering the next generation of innovators at Stella Mary's College of Engineering. Join us for a weekend of intense building.
+                        <div className="mb-3 pb-3 border-b border-white/10">
+                            <div className="flex items-center justify-center">
+                                <p className="text-white/40 text-xs uppercase font-bold leading-relaxed text-center">
+                                    Pioneering the next generation of innovators at Stella Mary's College of Engineering.
                                 </p>
                             </div>
-                            <div>
-                                <h3 className="font-black uppercase tracking-widest text-xs text-white/40 mb-4">Navigation</h3>
-                                <div className="flex flex-col space-y-3">
-                                    <button onClick={() => navigate('/')} className="text-sm font-black uppercase tracking-wider text-left hover:text-white/60 transition-all">Home</button>
-                                    <button onClick={handleDashboardAccess} className="text-sm font-black uppercase tracking-wider text-left hover:text-white/60 transition-all">Portal</button>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="font-black uppercase tracking-widest text-xs text-white/40 mb-4">Connect</h3>
-                                <div className="flex flex-col space-y-3">
-                                    <a href="#" className="text-sm font-black uppercase tracking-wider hover:text-white/60 transition-all">Instagram</a>
-                                    <a href="#" className="text-sm font-black uppercase tracking-wider hover:text-white/60 transition-all">LinkedIn</a>
-                                </div>
-                            </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <p className="text-[10px] font-black uppercase opacity-30 tracking-[0.3em]">© 2024 SMCE HACKATHON. ALL RIGHTS RESERVED.</p>
-                            <div className="flex items-center space-x-6">
-                                <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 flex items-center space-x-2">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-60">System Ready</span>
-                                </div>
-                            </div>
+                        <div className="flex items-center justify-center">
+                            <p className="text-[9px] font-black uppercase opacity-30 tracking-[0.3em]">© 2024 SMCE HACKATHON. ALL RIGHTS RESERVED.</p>
                         </div>
                     </div>
                 </footer>
