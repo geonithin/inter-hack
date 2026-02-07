@@ -117,7 +117,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between border-b-2 border-oxford pb-4">
                     <div>
                         <h2 className="text-xl sm:text-3xl font-bold text-oxford uppercase tracking-tight">Idea Submission</h2>
-                        <p className="text-xs sm:text-base text-oxford/60">Submit your solution for the selected problem</p>
+                        <p className="text-xs sm:text-base text-oxford/80">Submit your solution for the selected problem</p>
                     </div>
                     <button
                         onClick={() => { setHasSelected(false); }}
@@ -139,7 +139,7 @@ export default function Dashboard() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 sm:border-b-4 border-oxford pb-4 sm:pb-6">
                 <div className="space-y-1 sm:space-y-2">
                     <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Project Dashboard</h1>
-                    <p className="text-[10px] sm:text-sm text-oxford/60 font-bold uppercase tracking-widest">Select your innovation track</p>
+                    <p className="text-[10px] sm:text-sm text-oxford/80 font-bold uppercase tracking-widest">Select your innovation track</p>
                 </div>
 
                 <div className="flex items-center space-x-3 bg-oxford text-white px-6 py-4 rounded-xl shadow-xl">
@@ -157,11 +157,11 @@ export default function Dashboard() {
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl oxford-edge flex items-center justify-between shadow-lg">
                         <div>
-                            <p className="text-[9px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-[0.3em] mb-1">{stat.label}</p>
+                            <p className="text-[9px] sm:text-[10px] font-black text-oxford/70 uppercase tracking-[0.3em] mb-1">{stat.label}</p>
                             <p className="text-lg sm:text-2xl font-black text-oxford uppercase tracking-tight">{stat.value}</p>
                         </div>
                         <div className="p-2 bg-oxford/5 rounded-full">
-                            <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-oxford/20" />
+                            <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-oxford/50" />
                         </div>
                     </div>
                 ))}
@@ -170,11 +170,11 @@ export default function Dashboard() {
             {/* Tab Navigation */}
             <div className="flex items-center justify-center pt-4">
                 <div className="flex bg-gray-50 p-1 sm:p-2 rounded-xl sm:rounded-2xl border-2 border-oxford/10 overflow-x-auto">
-                    <button onClick={() => setFilterDept('All')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'All' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford")}>All Tracks</button>
-                    <button onClick={() => setFilterDept('CS')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CS' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford")}>CS</button>
-                    <button onClick={() => setFilterDept('EC')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'EC' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford")}>EC</button>
-                    <button onClick={() => setFilterDept('ME')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'ME' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford")}>ME</button>
-                    <button onClick={() => setFilterDept('EE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'EE' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford")}>EE</button>
+                    <button onClick={() => setFilterDept('All')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'All' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>All Tracks</button>
+                    <button onClick={() => setFilterDept('CS')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CS' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>CS</button>
+                    <button onClick={() => setFilterDept('EC')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'EC' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>EC</button>
+                    <button onClick={() => setFilterDept('ME')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'ME' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>ME</button>
+                    <button onClick={() => setFilterDept('EE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'EE' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>EE</button>
                 </div>
             </div>
 
@@ -221,8 +221,8 @@ export default function Dashboard() {
                                 
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2 text-sm">
-                                        <Users className="w-4 h-4 text-oxford/60" />
-                                        <span className="font-bold text-oxford/60">
+                                        <Users className="w-4 h-4 text-oxford/80" />
+                                        <span className="font-bold text-oxford/80">
                                             {statement.teams}/{statement.max_teams}
                                         </span>
                                     </div>
@@ -250,9 +250,9 @@ export default function Dashboard() {
                                         )}
                                         
                                         {isExpanded ? (
-                                            <ChevronDown className="w-5 h-5 text-oxford/60" />
+                                            <ChevronDown className="w-5 h-5 text-oxford/80" />
                                         ) : (
-                                            <ChevronRight className="w-5 h-5 text-oxford/60" />
+                                            <ChevronRight className="w-5 h-5 text-oxford/80" />
                                         )}
                                     </div>
                                 </div>
@@ -263,7 +263,7 @@ export default function Dashboard() {
                                 <div className="border-t border-oxford/10 p-6 bg-gray-50/30 animate-in slide-in-from-top-2 duration-300">
                                     <div className="prose prose-sm max-w-none">
                                         <h4 className="text-oxford font-black uppercase tracking-wide mb-3">Problem Description</h4>
-                                        <p className="text-oxford/80 leading-relaxed">
+                                        <p className="text-oxford/90 leading-relaxed">
                                             {statement.description}
                                         </p>
                                     </div>
@@ -299,7 +299,7 @@ export default function Dashboard() {
                                         <p className="text-xs font-bold text-amber-900 line-clamp-1">"{selectedStatement.title}"</p>
                                     </div>
                                 )}
-                                <p className="text-xs sm:text-lg text-oxford/60 leading-relaxed font-bold">
+                                <p className="text-xs sm:text-lg text-oxford/80 leading-relaxed font-bold">
                                     You are {selectedStatement ? "switching to:" : "selecting:"} <br />
                                     <span className="font-black text-oxford underline underline-offset-4 decoration-2">"{isConfirming.title}"</span>
                                 </p>

@@ -156,7 +156,7 @@ export default function Layout() {
                 <div className="lg:hidden fixed inset-0 z-[60]">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-oxford/60 backdrop-blur-sm animate-in fade-in duration-300"
+                        className="absolute inset-0 backdrop-blur-xl animate-in fade-in duration-300"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
                     {/* Floating Mini Menu Card */}

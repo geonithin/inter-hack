@@ -9,9 +9,9 @@ export default function Landing() {
             <div className="space-y-4 max-w-5xl">
                 <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85] mb-4">
                     Stella Mary's <br />
-                    <span className="text-oxford/10 font-black">College of Engineering</span>
+                    <span className="text-oxford/50 font-black">College of Engineering</span>
                 </h1>
-                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/30 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
+                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/70 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
                     Inter-College Hackathon 2026. <br className="hidden sm:block" />
                     Innovate, Collaborate, and Build the Future using Zero-Cost Technologies.
                 </p>
@@ -40,7 +40,7 @@ export default function Landing() {
                 ].map((feature, i) => (
                     <div key={i} className="p-4 sm:p-8 oxford-edge rounded-xl sm:rounded-2xl space-y-2 sm:space-y-3 bg-white text-left">
                         <h3 className="text-lg lg:text-2xl font-black text-oxford uppercase tracking-tight">{feature.title}</h3>
-                        <p className="text-[10px] lg:text-base text-oxford/60 font-bold leading-relaxed">{feature.desc}</p>
+                        <p className="text-[10px] lg:text-base text-oxford/80 font-bold leading-relaxed">{feature.desc}</p>
                     </div>
                 ))}
             </div>
@@ -55,21 +55,21 @@ export default function Landing() {
                     <div className="space-y-4 sm:space-y-6">
                         <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
                             <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Min 2, Max 5 members per team.</p>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Min 2, Max 5 members per team.</p>
                         </div>
                         <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
                             <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Complete before the locking period.</p>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Complete before the locking period.</p>
                         </div>
                     </div>
                     <div className="space-y-4 sm:space-y-6">
                         <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
                             <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Work on only one problem at a time.</p>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Work on only one problem at a time.</p>
                         </div>
                         <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
                             <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/60 font-bold">Original code only. No plagiarism.</p>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Original code only. No plagiarism.</p>
                         </div>
                     </div>
                 </div>
@@ -113,7 +113,7 @@ export default function Landing() {
                     <div className="space-y-6 sm:space-y-8">
                         <div className="space-y-2">
                             <h3 className="text-xl sm:text-3xl font-black text-oxford uppercase tracking-tight">Get in Touch</h3>
-                            <p className="text-sm sm:text-base text-oxford/60 font-bold leading-relaxed">
+                            <p className="text-sm sm:text-base text-oxford/80 font-bold leading-relaxed">
                                 Have questions about the hackathon? Reach out to us and we'll get back to you as soon as possible.
                             </p>
                         </div>
@@ -123,16 +123,16 @@ export default function Landing() {
                                     <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/40">Email</h4>
+                                    <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Email</h4>
                                     <a href="mailto:hackathon@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all">hackathon@smce.edu.in</a>
                                 </div>
                             </div>
                             <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/40">Phone</h4>
+                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Phone</h4>
                                 <a href="tel:+919876543210" className="text-base sm:text-xl font-black text-oxford hover:text-oxford-light transition-all">+91 98765 43210</a>
                             </div>
                             <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/40">Location</h4>
+                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Location</h4>
                                 <p className="text-sm sm:text-base font-black text-oxford leading-relaxed">
                                     Stella Mary's College of Engineering<br />
                                     Kanyakumari District, Tamil Nadu<br />
