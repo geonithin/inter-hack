@@ -85,8 +85,8 @@ export default function Layout() {
                 <div className="container-wide h-12 sm:h-16 flex items-center justify-between">
                     <div className="flex items-center">
                         <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
-                            <div className="p-1 sm:p-1.5 bg-white rounded-lg shadow-lg border-2 border-oxford flex items-center justify-center">
-                                <img src="/clg-logo.png" alt="Logo" className="w-6 h-6 sm:w-10 sm:h-10 object-contain" />
+                            <div className="p-1 sm:p-1 bg-white rounded-lg shadow-lg border-2 border-oxford flex items-center justify-center">
+                                <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-8 sm:h-8 object-contain" />
                             </div>
                             <div className="space-y-0.5">
                                 <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h1>
