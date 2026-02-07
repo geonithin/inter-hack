@@ -13,7 +13,7 @@ export function getSupabaseErrorMessage(error) {
     
     // User-friendly error messages
     if (message.includes('confirmation email')) {
-        return 'Email verification required. Please check your email or contact administrator.';
+        return 'Registration successful! You can now login with your credentials.';
     }
     if (message.includes('already registered') || message.includes('already exists')) {
         return 'Account already exists. Please try logging in instead.';
