@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-oxford: #064e3b;
+  --color-oxford-dark: #022c22;
+  --color-oxford-light: #059669;
+
+  --breakpoint-xs: 375px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+@layer base {
+  html {
+    font-size: 14px;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    html {
+      font-size: 16px;
+    }
+  }
+
+  body {
+    @apply bg-white text-oxford font-sans subpixel-antialiased;
+    line-height: 1.6;
+  }
+}
+
+@layer utilities {
+
+  /* Spacious Container Optimization */
+  .container-wide {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-screen-xl;
+  }
+
+  /* Oxford Edge Hover Effect - Simple border change only */
+  .oxford-edge {
+    @apply border-2 border-oxford transition-colors duration-200;
+  }
+
+  @media (hover: hover) {
+    .oxford-edge:hover {
+      @apply border-oxford-light border-[2.5px];
+    }
+  }
+
+  /* Normalized Typography - Compact Sizes */
+  .text-responsive-h1 {
+    @apply text-xl sm:text-4xl lg:text-5xl font-black;
+  }
+
+  .text-responsive-h2 {
+    @apply text-lg sm:text-3xl lg:text-4xl font-black;
+  }
+}
