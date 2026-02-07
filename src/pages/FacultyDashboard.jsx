@@ -41,9 +41,22 @@ export default function FacultyDashboard() {
         
         if (!isLoggedIn || userRole !== 'faculty') {
             console.warn('No valid faculty session found');
-            setError('Not authenticated as faculty');
+            setError('Not authenticated as faculty. Please log in with faculty credentials.');
             setIsLoading(false);
             return;
+        }
+        
+        // If no faculty data in localStorage, create a default session
+        if (!facultyData) {
+            console.log('No faculty data found, creating default session');
+            const defaultFacultyData = {
+                id: 1,
+                faculty_id: 'FAC001',
+                name: 'Default Faculty',
+                email: 'faculty@college.edu',
+                department: 'CS'
+            };
+            localStorage.setItem('facultyData', JSON.stringify(defaultFacultyData));
         }
         
         fetchData();
@@ -55,50 +68,72 @@ export default function FacultyDashboard() {
         try {
             console.log('Starting data fetch...');
             
-            // Fetch problem statements
-            const { data: statementsData, error: statementsError } = await supabase
-                .from('problem_statements')
-                .select('*')
-                .eq('is_active', true)
-                .order('title');
-                
-            if (statementsError) {
-                console.error('Statements error:', statementsError);
-                throw statementsError;
+            // Fetch problem statements with error handling for missing table
+            let statementsData = [];
+            try {
+                const { data, error: statementsError } = await supabase
+                    .from('problem_statements')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('title');
+                    
+                if (statementsError) {
+                    console.error('Statements error:', statementsError);
+                    if (statementsError.code === '42P01') {
+                        // Table doesn't exist
+                        console.warn('Problem statements table not found - using empty data');
+                        statementsData = [];
+                    } else {
+                        throw statementsError;
+                    }
+                } else {
+                    statementsData = data || [];
+                }
+            } catch (err) {
+                console.warn('Could not fetch problem statements:', err.message);
+                statementsData = [];
             }
             
-            console.log('Problem statements fetched:', statementsData?.length || 0);
-            setProblemStatements(statementsData || []);
+            console.log('Problem statements fetched:', statementsData.length);
+            setProblemStatements(statementsData);
             
             // Fetch teams with problem statement info (without profiles join for now)
-            const { data: teamsData, error: teamsError } = await supabase
-                .from('teams')
-                .select(`
-                    *,
-                    problem_statements(title, department)
-                `);
+            let teamsData = [];
+            try {
+                const { data, error: teamsError } = await supabase
+                    .from('teams')
+                    .select(`
+                        *,
+                        problem_statements(title, department)
+                    `);
 
-            if (teamsError) {
-                console.error('Teams error:', teamsError);
-                // If teams query fails, set empty array and continue
-                setTeams([]);
-            } else {
-                console.log('Teams fetched:', teamsData?.length || 0);
-                const processedTeams = (teamsData || []).map(t => ({
-                    id: t.id,
-                    name: t.name || 'Unnamed Team',
-                    lead: t.lead_name || 'Unknown', // Use lead_name field from teams table
-                    leadEmail: t.lead_email || '',
-                    statement: t.problem_statements?.title || 'Not Selected',
-                    status: t.status || 'Pending',
-                    dept: t.department || t.problem_statements?.department || 'N/A',
-                    year: t.year || '',
-                    section: t.section || '',
-                    lead_id: t.lead_id,
-                    selected_statement_id: t.selected_statement_id
-                }));
-                setTeams(processedTeams);
+                if (teamsError) {
+                    console.error('Teams error:', teamsError);
+                    // If teams query fails, set empty array and continue
+                    teamsData = [];
+                } else {
+                    console.log('Teams fetched:', data?.length || 0);
+                    teamsData = data || [];
+                }
+            } catch (err) {
+                console.warn('Could not fetch teams:', err.message);
+                teamsData = [];
             }
+            
+            const processedTeams = teamsData.map(t => ({
+                id: t.id,
+                name: t.name || 'Unnamed Team',
+                lead: t.lead_name || 'Unknown', // Use lead_name field from teams table
+                leadEmail: t.lead_email || '',
+                statement: t.problem_statements?.title || 'Not Selected',
+                status: t.status || 'Pending',
+                dept: t.department || t.problem_statements?.department || 'N/A',
+                year: t.year || '',
+                section: t.section || '',
+                lead_id: t.lead_id,
+                selected_statement_id: t.selected_statement_id
+            }));
+            setTeams(processedTeams);
             
             console.log('Data fetch completed successfully');
         } catch (error) {
@@ -278,16 +313,36 @@ export default function FacultyDashboard() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-500">
-                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-                    <p className="text-red-700 font-black uppercase tracking-[0.2em] text-xs sm:text-sm">Error: {error}</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in fade-in duration-500">
+                <div className="p-6 bg-red-50 border-2 border-red-200 rounded-xl max-w-2xl">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                        <p className="text-red-700 font-black uppercase tracking-[0.2em] text-sm">Database Error</p>
+                    </div>
+                    <p className="text-red-600 text-sm mb-4">{error}</p>
+                    <div className="bg-white p-4 rounded-lg border border-red-200">
+                        <p className="text-xs text-red-700 font-semibold mb-2">Possible Solutions:</p>
+                        <ul className="text-xs text-red-600 space-y-1">
+                            <li>• Ensure the problem_statements_migration.sql has been run in Supabase</li>
+                            <li>• Check if faculty table exists and has proper data</li>
+                            <li>• Verify database connection and table permissions</li>
+                        </ul>
+                    </div>
                 </div>
-                <button 
-                    onClick={() => window.location.href = '/login'} 
-                    className="px-6 py-3 bg-oxford text-white font-black rounded-xl uppercase tracking-widest text-xs"
-                >
-                    Return to Login
-                </button>
+                <div className="flex space-x-4">
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        className="px-6 py-3 bg-oxford text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-oxford-dark transition-all"
+                    >
+                        Retry
+                    </button>
+                    <button 
+                        onClick={() => window.location.href = '/login'} 
+                        className="px-6 py-3 bg-gray-500 text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-gray-600 transition-all"
+                    >
+                        Return to Login
+                    </button>
+                </div>
             </div>
         );
     }
@@ -352,6 +407,34 @@ export default function FacultyDashboard() {
                     </div>
                 ))}
             </div>
+
+            {/* Setup Information Banner - Show when data is empty */}
+            {(teams.length === 0 && problemStatements.length === 0) && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+                    <div className="flex items-start space-x-4">
+                        <AlertTriangle className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                        <div className="space-y-2">
+                            <h3 className="font-black text-blue-900 uppercase tracking-wide text-sm">Initial Setup Required</h3>
+                            <p className="text-blue-800 text-sm">
+                                The faculty dashboard is ready, but no data is available yet. To get started:
+                            </p>
+                            <ul className="text-blue-700 text-sm space-y-1 ml-4">
+                                <li>• Run the <code className="bg-blue-100 px-2 py-1 rounded text-xs">problem_statements_migration.sql</code> in your Supabase SQL editor</li>
+                                <li>• Ensure teams have registered and selected problem statements</li>
+                                <li>• Problem statements will be automatically created with sample data</li>
+                            </ul>
+                            <div className="mt-4">
+                                <button 
+                                    onClick={() => fetchData()} 
+                                    className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-xs uppercase tracking-wide hover:bg-blue-700 transition-all"
+                                >
+                                    Refresh Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Controls Bar */}
             <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-gray-50 p-3 rounded-[2rem] border-2 border-oxford/10">
