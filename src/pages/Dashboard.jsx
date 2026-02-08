@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SubmissionForm from '../components/SubmissionForm';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
-    const navigate = useNavigate();
+    const { user, isAuthenticated } = useAuth();
     const [team, setTeam] = useState(null);
     const [problemStatements, setProblemStatements] = useState([]);
     const [selectedStatement, setSelectedStatement] = useState(null);
@@ -15,12 +15,17 @@ export default function Dashboard() {
     const [filterDept, setFilterDept] = useState('All');
     const [isLoading, setIsLoading] = useState(true);
     const [expandedRow, setExpandedRow] = useState(null);
+    
+    // Notification system
+    const [notification, setNotification] = useState(null);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                navigate('/login');
+        const loadDashboardData = async () => {
+            // With protected routes, we can trust that user is authenticated
+            if (!isAuthenticated() || !user) {
                 return;
             }
 
@@ -72,8 +77,73 @@ export default function Dashboard() {
             setIsLoading(false);
         };
 
-        checkUser();
-    }, [navigate]);
+        loadDashboardData();
+        fetchNotifications();
+    }, [isAuthenticated, user]);
+
+    // Show notification toast
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 4000);
+    };
+
+    // Fetch notifications
+    const fetchNotifications = async () => {
+        if (!user) return;
+        
+        try {
+            console.log('Fetching notifications for user:', user.id);
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('recipient_id', user.id.toString())  // Convert to string
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (error) {
+                console.error('Error fetching notifications:', error);
+                return;
+            }
+
+            console.log('Fetched notifications:', data);
+            setNotifications(data || []);
+            const unread = (data || []).filter(n => !n.is_read).length;
+            setUnreadCount(unread);
+            console.log('Unread count:', unread);
+        } catch (error) {
+            console.error('Error in fetchNotifications:', error);
+        }
+    };
+
+    // Set up real-time notification subscription - simplified
+    useEffect(() => {
+        if (!user) return;
+
+        console.log('Dashboard: Setting up simplified notification subscription');
+        
+        // Use polling instead of WebSocket to avoid connection issues
+        const pollInterval = setInterval(() => {
+            fetchNotifications();
+        }, 5000); // Poll every 5 seconds
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [user]);
+
+    // Listen for global notification updates (when marked as read in other components)
+    useEffect(() => {
+        const handleNotificationUpdate = (event) => {
+            console.log('Dashboard: Global notification update received:', event.detail);
+            setUnreadCount(event.detail.unreadCount);
+        };
+
+        window.addEventListener('notificationUpdate', handleNotificationUpdate);
+        
+        return () => {
+            window.removeEventListener('notificationUpdate', handleNotificationUpdate);
+        };
+    }, []);
 
     const filteredStatements = filterDept === 'All'
         ? problemStatements
@@ -96,9 +166,38 @@ export default function Dashboard() {
             setHasSelected(true);
             setIsConfirming(null);
             setTeam({ ...team, selected_statement_id: isConfirming.id });
+            
+            // Show success notification
+            showNotification(`Problem statement "${isConfirming.title}" selected successfully!`, 'success');
+            
+            // Create notification record
+            try {
+                const { error: notificationError } = await supabase
+                    .from('notifications')
+                    .insert([{
+                        recipient_id: user.id,
+                        recipient_type: 'team',
+                        title: 'Problem Statement Selected!',
+                        message: `Your team "${team.name}" has successfully selected the problem statement: "${isConfirming.title}". You can now start working on your solution!`,
+                        type: 'info',
+                        is_read: false,
+                        sender_type: 'system',
+                        team_id: team.id
+                    }]);
+
+                if (notificationError) {
+                    console.error('Error creating selection notification:', notificationError);
+                } else {
+                    console.log('Selection notification created successfully');
+                    // Refresh notifications to show the new one
+                    fetchNotifications();
+                }
+            } catch (error) {
+                console.error('Selection notification error:', error);
+            }
         } catch (error) {
             console.error('Error updating selection:', error);
-            alert('Failed to save selection. Please try again.');
+            showNotification('Failed to save selection. Please try again.', 'error');
         }
     };
 
@@ -155,7 +254,7 @@ export default function Dashboard() {
                     { label: "Track choice", value: selectedStatement ? "Selected" : "Pending", icon: Filter },
                     { label: "Submission", value: "Not Started", icon: Search },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl oxford-edge flex items-center justify-between shadow-lg">
+                    <div key={i} className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-transparent hover:border-oxford shadow-lg hover:shadow-xl transition-all flex items-center justify-between">
                         <div>
                             <p className="text-[9px] sm:text-[10px] font-black text-oxford/70 uppercase tracking-[0.3em] mb-1">{stat.label}</p>
                             <p className="text-lg sm:text-2xl font-black text-oxford uppercase tracking-tight">{stat.value}</p>
@@ -187,8 +286,8 @@ export default function Dashboard() {
 
                     return (
                         <div key={statement.id} className={cn(
-                            "border-2 rounded-xl bg-white shadow-lg transition-all overflow-hidden",
-                            isSelected ? "border-emerald-600 bg-emerald-50/10 ring-2 ring-emerald-500 ring-offset-1" : "border-oxford/10 hover:border-oxford/30"
+                            "border-2 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all overflow-hidden",
+                            isSelected ? "border-emerald-600 bg-emerald-50/10 ring-2 ring-emerald-500 ring-offset-1" : "border-transparent hover:border-oxford/30"
                         )}>
                             {/* Row Header */}
                             <div 
@@ -319,6 +418,101 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Notification Bell */}
+            {unreadCount > 0 && (
+                <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="fixed bottom-6 right-6 z-50 p-4 bg-oxford text-white rounded-full shadow-lg hover:bg-oxford-dark transition-all active:scale-95 animate-bounce"
+                >
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                </button>
+            )}
+
+            {/* Notification Panel */}
+            {showNotifications && (
+                <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm" onClick={() => setShowNotifications(false)}>
+                    <div className="fixed right-0 top-0 h-full w-80 max-w-full bg-white shadow-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-oxford">Notifications</h3>
+                                <button onClick={() => setShowNotifications(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="p-4">
+                            {notifications.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                    <p>No notifications yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {notifications.slice(0, 10).map((notif) => (
+                                        <div
+                                            key={notif.id}
+                                            className={cn(
+                                                "p-3 rounded-lg border",
+                                                notif.is_read 
+                                                    ? "bg-gray-50 border-gray-200" 
+                                                    : "bg-blue-50 border-blue-200"
+                                            )}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                {notif.type === 'status_update' && <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5" />}
+                                                {notif.type === 'welcome' && <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />}
+                                                {notif.type === 'info' && <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5" />}
+                                                
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-xs text-gray-900 mb-1">
+                                                        {notif.title}
+                                                    </p>
+                                                    <p className="text-xs text-gray-600">
+                                                        {notif.message}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400 mt-1">
+                                                        {new Date(notif.created_at).toLocaleDateString()} {new Date(notif.created_at).toLocaleTimeString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {notification && (
+                <div className={cn(
+                    "fixed bottom-6 left-6 z-[100] p-4 rounded-xl shadow-2xl border-2 animate-in slide-in-from-bottom-4 fade-in duration-300 max-w-sm",
+                    notification.type === 'success' ? "bg-green-50 border-green-200 text-green-800" :
+                    notification.type === 'error' ? "bg-red-50 border-red-200 text-red-800" :
+                    notification.type === 'info' ? "bg-blue-50 border-blue-200 text-blue-800" :
+                    "bg-yellow-50 border-yellow-200 text-yellow-800"
+                )}>
+                    <div className="flex items-center gap-3">
+                        {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                        {notification.type === 'error' && <XCircle className="w-5 h-5 text-red-600" />}
+                        {notification.type === 'info' && <AlertCircle className="w-5 h-5 text-blue-600" />}
+                        {(notification.type === 'warning' || !notification.type) && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+                        <p className="font-bold text-sm">{notification.message}</p>
+                        <button 
+                            onClick={() => setNotification(null)}
+                            className="ml-2 p-1 hover:bg-black/10 rounded transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             )}

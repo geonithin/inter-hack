@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { Users, FileText, CheckCircle2, XCircle, Search, Filter, ArrowUpRight, Edit, Trash2, Eye, X, Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 export default function FacultyDashboard() {
+    const { isAuthenticated, getUserRole, user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState('All');
+    const [deptFilter, setDeptFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [notification, setNotification] = useState(null);
     const [exporting, setExporting] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -32,41 +36,31 @@ export default function FacultyDashboard() {
     });
 
     useEffect(() => {
-        // Check if we have faculty data in localStorage
-        const facultyData = localStorage.getItem('facultyData');
-        const isLoggedIn = localStorage.getItem('isLoggedIn');
-        const userRole = localStorage.getItem('userRole');
-        
-        console.log('Faculty auth check:', { isLoggedIn, userRole, hasFacultyData: !!facultyData });
-        
-        if (!isLoggedIn || userRole !== 'faculty') {
+        // With protected routes, we can trust that user is authenticated with faculty role  
+        if (!isAuthenticated() || !user) {
             console.warn('No valid faculty session found');
             setError('Not authenticated as faculty. Please log in with faculty credentials.');
             setIsLoading(false);
             return;
         }
         
-        // If no faculty data in localStorage, create a default session
-        if (!facultyData) {
-            console.log('No faculty data found, creating default session');
-            const defaultFacultyData = {
-                id: 1,
-                faculty_id: 'FAC001',
-                name: 'Default Faculty',
-                email: 'faculty@college.edu',
-                department: 'CS'
-            };
-            localStorage.setItem('facultyData', JSON.stringify(defaultFacultyData));
+        // Verify the user has faculty role
+        const userRole = getUserRole();
+        
+        if (userRole !== 'faculty' && userRole !== 'admin') {
+            console.warn('User does not have faculty privileges, role:', userRole);
+            setError('Access denied. Faculty privileges required.');
+            setIsLoading(false);
+            return;
         }
         
         fetchData();
-    }, []);
+    }, [isAuthenticated, user, getUserRole]);
     
     const fetchData = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            console.log('Starting data fetch...');
             
             // Fetch problem statements with error handling for missing table
             let statementsData = [];
@@ -94,7 +88,6 @@ export default function FacultyDashboard() {
                 statementsData = [];
             }
             
-            console.log('Problem statements fetched:', statementsData.length);
             setProblemStatements(statementsData);
             
             // Fetch teams with problem statement info (without profiles join for now)
@@ -178,13 +171,13 @@ export default function FacultyDashboard() {
                 
             if (error) throw error;
             
+            showNotification('Problem statement added successfully!', 'success');
             await fetchData();
             setIsStatementModalOpen(false);
             setNewStatement({ title: '', description: '', department: 'CS', max_teams: 3 });
-            alert('Problem statement added successfully!');
         } catch (error) {
             console.error('Error adding statement:', error);
-            alert('Failed to add problem statement');
+            showNotification('Failed to add problem statement', 'error');
         }
     };
     
@@ -201,7 +194,7 @@ export default function FacultyDashboard() {
             if (checkError) throw checkError;
             
             if (teamsUsingStatement && teamsUsingStatement.length > 0) {
-                alert(`Cannot delete: ${teamsUsingStatement.length} team(s) have selected this statement.`);
+                showNotification(`Cannot delete: ${teamsUsingStatement.length} team(s) have selected this statement.`, 'error');
                 return;
             }
             
@@ -212,34 +205,158 @@ export default function FacultyDashboard() {
                 
             if (error) throw error;
             
+            showNotification('Problem statement deleted successfully!', 'success');
             await fetchData();
             setIsDeleteStatementModalOpen(false);
             setSelectedStatement(null);
-            alert('Problem statement deleted successfully!');
         } catch (error) {
             console.error('Error deleting statement:', error);
-            alert('Failed to delete problem statement');
+            showNotification('Failed to delete problem statement', 'error');
         }
+    };
+
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 4000);
     };
 
     const handleStatusUpdate = async (teamId, newStatus) => {
         try {
-            const { error } = await supabase
+            console.log('Updating status for team:', teamId, 'to:', newStatus);
+            
+            // Debug: Check current user authentication details
+            console.log('=== DEBUGGING STATUS UPDATE ===');
+            try {
+                const { data: debugInfo, error: debugError } = await supabase.rpc('debug_current_user');
+                if (debugError) {
+                    console.error('Debug function error:', debugError);
+                } else {
+                    console.log('Debug - Current user info:', debugInfo);
+                }
+            } catch (debugError) {
+                console.log('Debug function call failed:', debugError);
+            }
+            
+            // Check Supabase auth status
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            console.log('Supabase auth user:', currentUser);
+            
+            // Test basic database connectivity
+            const { data: testData, error: testError } = await supabase
                 .from('teams')
-                .update({ status: newStatus })
+                .select('id, name, status')
+                .limit(1);
+            console.log('Basic database test:', { testData, testError });
+            
+            console.log('=== END DEBUGGING ===');
+            
+            // Find the team being updated
+            const teamBeingUpdated = teams.find(t => t.id === teamId);
+            console.log('Team being updated:', teamBeingUpdated);
+            
+            if (!teamBeingUpdated) {
+                throw new Error('Team not found');
+            }
+            
+            // Optimistic update - update local state immediately
+            setTeams(prevTeams => 
+                prevTeams.map(team => 
+                    team.id === teamId ? { ...team, status: newStatus } : team
+                )
+            );
+            
+            // Show immediate feedback
+            const statusColor = newStatus === 'Selected' ? 'success' : 
+                              newStatus === 'Rejected' ? 'error' : 'warning';
+            showNotification(
+                `Team "${teamBeingUpdated?.name}" status is being updated to ${newStatus.toLowerCase()}...`, 
+                'info'
+            );
+
+            // Update in database with better error handling
+            console.log('Updating team status in database...');
+            console.log('Current user from auth context:', user);
+            console.log('Team ID type:', typeof teamId, 'Team ID value:', teamId);
+            console.log('New status:', newStatus);
+            
+            // First, let's check if we can select this team before updating
+            console.log('Testing SELECT access first...');
+            const { data: selectTest, error: selectError } = await supabase
+                .from('teams')
+                .select('*')
                 .eq('id', teamId);
+            console.log('Select test result:', { selectTest, selectError, canReadTeam: !!selectTest?.length });
+            
+            // Now try the update
+            console.log('Attempting UPDATE operation...');
+            const updateStart = Date.now();
+            const { data, error, status, statusText } = await supabase
+                .from('teams')
+                .update({ 
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', teamId)
+                .select('*'); // Return the updated row to confirm it worked
 
-            if (error) throw error;
+            const updateTime = Date.now() - updateStart;
+            console.log('Update operation completed in', updateTime, 'ms');
+            console.log('Update response details:', { 
+                data, 
+                error, 
+                status, 
+                statusText,
+                dataCount: data?.length,
+                hasData: !!data,
+                isArray: Array.isArray(data)
+            });
 
-            await fetchData();
+            if (error) {
+                console.error('Database update error:', error);
+                console.error('Error details:', {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint
+                });
+                throw new Error(`Failed to update status: ${error.message}`);
+            }
+            
+            if (!data || data.length === 0) {
+                console.error('No rows updated - this suggests RLS policy is blocking the update');
+                console.error('Update operation returned empty data despite no error');
+                
+                // Additional debugging queries
+                const { data: allTeams } = await supabase.from('teams').select('id, name, status').limit(5);
+                console.log('Sample of all teams we can see:', allTeams);
+                
+                throw new Error('Status update failed - no rows were affected (RLS policy issue)');
+            }
+            
+            console.log('Team status updated successfully in database:', data[0]);
+
+            // Show success notification
+            showNotification(
+                `Team "${teamBeingUpdated?.name}" has been ${newStatus.toLowerCase()}!`, 
+                statusColor
+            );
+
+            // Refresh data to ensure consistency with database
+            setTimeout(fetchData, 1000); // Small delay to ensure all DB operations complete
+            
         } catch (error) {
             console.error('Error updating status:', error);
-            alert('Failed to update status');
+            showNotification(`Failed to update team status: ${error.message}`, 'error');
+            
+            // Revert optimistic update on error
+            await fetchData();
         }
     };
 
     const handleDeleteTeam = async (id) => {
         try {
+            const teamToDelete = teams.find(t => t.id === id);
+            
             // Delete team members first
             await supabase.from('members').delete().eq('team_id', id);
             
@@ -251,11 +368,14 @@ export default function FacultyDashboard() {
 
             if (error) throw error;
 
+            showNotification(`Team "${teamToDelete?.name}" has been deleted successfully`, 'success');
             await fetchData();
             setDeleteConfirmId(null);
+            setIsViewModalOpen(false);
+            setSelectedTeam(null);
         } catch (error) {
             console.error('Error deleting team:', error);
-            alert('Failed to delete team');
+            showNotification('Failed to delete team', 'error');
         }
     };
 
@@ -274,12 +394,13 @@ export default function FacultyDashboard() {
 
             if (error) throw error;
 
+            showNotification(`Team "${selectedTeam.name}" has been updated successfully`, 'success');
             setIsEditModalOpen(false);
             setSelectedTeam(null);
             await fetchData();
         } catch (error) {
             console.error('Error updating team:', error);
-            alert('Failed to update team');
+            showNotification('Failed to update team', 'error');
         }
     };
 
@@ -301,6 +422,24 @@ export default function FacultyDashboard() {
         { label: 'CS Track', value: problemStatements.filter(s => s.department === 'CS').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'EC Track', value: problemStatements.filter(s => s.department === 'EC').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
     ];
+
+    // Emergency fallback for debugging
+    if (typeof isAuthenticated !== 'function') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 p-8">
+                <div className="bg-white p-6 rounded-xl border-2 border-red-200">
+                    <h2 className="text-red-700 font-bold text-xl mb-4">Authentication Context Error</h2>
+                    <p className="text-red-600 mb-4">The authentication context is not properly initialized.</p>
+                    <button 
+                        onClick={() => window.location.href = '/login'} 
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                        Go to Login
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (
@@ -351,14 +490,16 @@ export default function FacultyDashboard() {
         const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             team.statement.toLowerCase().includes(searchQuery.toLowerCase()) ||
             team.lead.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filterStatus === 'All' || team.status === filterStatus;
-        return matchesSearch && matchesFilter;
+        const matchesDept = deptFilter === '' || team.department === deptFilter;
+        const matchesStatus = statusFilter === '' || team.status === statusFilter;
+        return matchesSearch && matchesDept && matchesStatus;
     });
     
     const filteredStatements = problemStatements.filter(statement => {
         const matchesSearch = statement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             statement.department.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
+        const matchesDept = deptFilter === '' || statement.department === deptFilter;
+        return matchesSearch && matchesDept;
     });
 
     return (
@@ -370,26 +511,28 @@ export default function FacultyDashboard() {
                     <p className="text-[10px] sm:text-xs text-oxford/40 font-black uppercase tracking-[0.3em]">Institutional Oversight & Management</p>
                 </div>
                 
-                {/* View Toggle */}
-                <div className="flex bg-gray-50 p-1 rounded-xl border-2 border-oxford/10">
-                    <button
-                        onClick={() => setCurrentView('teams')}
-                        className={cn(
-                            "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
-                            currentView === 'teams' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
-                        )}
-                    >
-                        Teams
-                    </button>
-                    <button
-                        onClick={() => setCurrentView('statements')}
-                        className={cn(
-                            "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
-                            currentView === 'statements' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
-                        )}
-                    >
-                        Statements
-                    </button>
+                <div className="flex items-center gap-4">
+                    {/* View Toggle */}
+                    <div className="flex bg-gray-50 p-1 rounded-xl border-2 border-oxford/10">
+                        <button
+                            onClick={() => setCurrentView('teams')}
+                            className={cn(
+                                "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
+                                currentView === 'teams' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
+                            )}
+                        >
+                            Teams
+                        </button>
+                        <button
+                            onClick={() => setCurrentView('statements')}
+                            className={cn(
+                                "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
+                                currentView === 'statements' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
+                            )}
+                        >
+                            Statements
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -412,7 +555,7 @@ export default function FacultyDashboard() {
             {(teams.length === 0 && problemStatements.length === 0) && (
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
                     <div className="flex items-start space-x-4">
-                        <AlertTriangle className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                        <AlertTriangle className="w-6 h-6 text-blue-600 mt-1 shrink-0" />
                         <div className="space-y-2">
                             <h3 className="font-black text-blue-900 uppercase tracking-wide text-sm">Initial Setup Required</h3>
                             <p className="text-blue-800 text-sm">
@@ -437,7 +580,7 @@ export default function FacultyDashboard() {
             )}
 
             {/* Controls Bar */}
-            <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-gray-50 p-3 rounded-[2rem] border-2 border-oxford/10">
+            <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-gray-50 p-3 rounded-4xl border-2 border-oxford/10">
                 <div className="relative w-full lg:max-w-md">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-oxford/30" />
                     <input
@@ -450,33 +593,59 @@ export default function FacultyDashboard() {
                 </div>
                 <div className="flex gap-2 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
                     {currentView === 'teams' ? (
-                        ['All', 'Pending', 'Selected', 'Rejected'].map((status) => (
-                            <button
-                                key={status}
-                                onClick={() => setFilterStatus(status)}
-                                className={cn(
-                                    "whitespace-nowrap px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all",
-                                    filterStatus === status ? "bg-oxford text-white shadow-lg" : "bg-white text-oxford/40 hover:text-oxford border-2 border-oxford/5"
-                                )}
+                        <div className="flex gap-2">
+                            <select
+                                value={deptFilter}
+                                onChange={(e) => setDeptFilter(e.target.value)}
+                                className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
                             >
-                                {status}
-                            </button>
-                        ))
+                                <option value="">All Departments</option>
+                                <option value="CS">Computer Science</option>
+                                <option value="EC">Electronics</option>
+                                <option value="ME">Mechanical</option>
+                                <option value="CE">Civil</option>
+                                <option value="EE">Electrical</option>
+                            </select>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
+                            >
+                                <option value="">All Status</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Selected">Selected</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                        </div>
                     ) : (
-                        <button
-                            onClick={() => setIsStatementModalOpen(true)}
-                            className="px-6 py-2.5 bg-oxford text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-oxford-dark transition-all shadow-lg flex items-center gap-2"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Add Statement
-                        </button>
+                        <div className="flex gap-2">
+                            <select
+                                value={deptFilter}
+                                onChange={(e) => setDeptFilter(e.target.value)}
+                                className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
+                            >
+                                <option value="">All Departments</option>
+                                <option value="CS">Computer Science</option>
+                                <option value="EC">Electronics</option>
+                                <option value="ME">Mechanical</option>
+                                <option value="CE">Civil</option>
+                                <option value="EE">Electrical</option>
+                            </select>
+                            <button
+                                onClick={() => setIsStatementModalOpen(true)}
+                                className="px-6 py-2.5 bg-oxford text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-oxford-dark transition-all shadow-lg flex items-center gap-2"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Statement
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
 
             {/* Main Content - Conditional based on view */}
             {currentView === 'teams' ? (
-                <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-4 border-oxford">
+                <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
                     <div className="overflow-x-auto text-[10px] sm:text-xs">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-oxford text-white border-b-4 border-oxford">
@@ -490,7 +659,7 @@ export default function FacultyDashboard() {
                             </thead>
                             <tbody className="divide-y-2 divide-oxford/10">
                                 {filteredTeams.length > 0 ? filteredTeams.map((team) => (
-                                    <tr key={team.id} className="hover:bg-oxford/[0.02] transition-colors group">
+                                    <tr key={team.id} className="hover:bg-oxford/2 transition-colors group">
                                         <td className="p-5 sm:p-6">
                                             <p className="font-black text-oxford uppercase tracking-tight group-hover:text-oxford-light transition-all">{team.name}</p>
                                             <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest mt-0.5">
@@ -502,7 +671,7 @@ export default function FacultyDashboard() {
                                             <p className="text-[9px] font-black text-oxford/40 mt-0.5">{team.leadEmail}</p>
                                         </td>
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
-                                            <p className="font-black text-oxford uppercase tracking-tight line-clamp-2 max-w-[250px]">{team.statement}</p>
+                                            <p className="font-black text-oxford uppercase tracking-tight line-clamp-2 max-w-62.5">{team.statement}</p>
                                         </td>
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10 text-center">
                                             <div className={cn(
@@ -521,30 +690,23 @@ export default function FacultyDashboard() {
                                             </div>
                                         </td>
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
-                                            <div className="flex items-center gap-2 justify-center">
+                                            <div className="flex items-center gap-3 justify-center">
                                                 <button
                                                     onClick={() => handleViewTeam(team)}
-                                                    className="p-2 bg-oxford/5 hover:bg-oxford hover:text-white text-oxford rounded-lg transition-all group/btn"
-                                                    title="View Details"
+                                                    className="p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all group/btn"
+                                                    title="View Team Details"
                                                 >
                                                     <Eye className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
                                                 </button>
                                                 <select
                                                     value={team.status}
                                                     onChange={(e) => handleStatusUpdate(team.id, e.target.value)}
-                                                    className="text-[9px] font-black uppercase px-2 py-1 border-2 border-oxford/10 rounded-lg focus:border-oxford outline-none"
+                                                    className="text-[10px] font-black uppercase px-3 py-2 border-2 border-oxford/10 rounded-lg focus:border-oxford outline-none bg-white hover:border-oxford/30 transition-all cursor-pointer min-w-[100px]"
                                                 >
                                                     <option value="Pending">Pending</option>
                                                     <option value="Selected">Selected</option>
                                                     <option value="Rejected">Rejected</option>
                                                 </select>
-                                                <button
-                                                    onClick={() => setDeleteConfirmId(team.id)}
-                                                    className="p-2 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 rounded-lg transition-all group/btn"
-                                                    title="Delete Team"
-                                                >
-                                                    <Trash2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -564,7 +726,7 @@ export default function FacultyDashboard() {
                 </div>
             ) : (
                 /* Problem Statements View */
-                <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-4 border-oxford">
+                <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
                     <div className="overflow-x-auto text-[10px] sm:text-xs">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-oxford text-white border-b-4 border-oxford">
@@ -579,7 +741,7 @@ export default function FacultyDashboard() {
                                 {filteredStatements.length > 0 ? filteredStatements.map((statement) => {
                                     const teamCount = teams.filter(t => t.selected_statement_id === statement.id).length;
                                     return (
-                                        <tr key={statement.id} className="hover:bg-oxford/[0.02] transition-colors group">
+                                        <tr key={statement.id} className="hover:bg-oxford/2 transition-colors group">
                                             <td className="p-5 sm:p-6">
                                                 <p className="font-black text-oxford uppercase tracking-tight group-hover:text-oxford-light transition-all line-clamp-2">
                                                     {statement.title}
@@ -630,141 +792,6 @@ export default function FacultyDashboard() {
                             </tbody>
                         </table>
                     </div>
-                </div>
-            )}
-
-            {/* Teams Table */}
-            {view === 'teams' && (
-                <div className="space-y-6">
-                    {/* Search and Filter */}
-                    <div className="bg-white rounded-3xl shadow-2xl border-4 border-oxford overflow-hidden">
-                        <div className="bg-oxford p-6 text-white">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter">Team Management</h2>
-                            <p className="text-oxford-light text-xs uppercase tracking-widest font-black mt-1">View, edit, and manage all teams</p>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-oxford/40" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search teams..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3.5 text-sm font-black bg-oxford/5 border-2 border-oxford/20 rounded-2xl placeholder-oxford/40 uppercase tracking-widest focus:outline-none focus:border-oxford transition-all"
-                                    />
-                                </div>
-                                <select
-                                    value={deptFilter}
-                                    onChange={(e) => setDeptFilter(e.target.value)}
-                                    className="px-4 py-3.5 text-sm font-black bg-oxford/5 border-2 border-oxford/20 rounded-2xl text-oxford uppercase tracking-widest focus:outline-none focus:border-oxford cursor-pointer transition-all"
-                                >
-                                    <option value="">All Departments</option>
-                                    <option value="CS">Computer Science</option>
-                                    <option value="EC">Electronics</option>
-                                    <option value="ME">Mechanical</option>
-                                    <option value="CE">Civil</option>
-                                    <option value="EE">Electrical</option>
-                                </select>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="px-4 py-3.5 text-sm font-black bg-oxford/5 border-2 border-oxford/20 rounded-2xl text-oxford uppercase tracking-widest focus:outline-none focus:border-oxford cursor-pointer transition-all"
-                                >
-                                    <option value="">All Status</option>
-                                    <option value="Pending">Pending</option>
-                                    <option value="Selected">Selected</option>
-                                    <option value="Rejected">Rejected</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Teams Table */}
-                    <div className="bg-white rounded-3xl shadow-2xl border-4 border-oxford overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-oxford text-white">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.3em]">Team</th>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.3em]">Lead</th>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.3em]">Department</th>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.3em]">Status</th>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.3em]">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y-2 divide-oxford/10">
-                                {filteredTeams.length > 0 ? filteredTeams.map((team, index) => (
-                                    <tr key={team.id} className={index % 2 === 0 ? 'bg-oxford/2' : 'bg-white'}>
-                                        <td className="px-6 py-6">
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-black text-oxford uppercase tracking-wide">{team.name}</p>
-                                                <p className="text-xs text-oxford/50 font-black uppercase tracking-widest">ID: #{team.id}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <p className="text-sm font-black text-oxford uppercase">{team.lead}</p>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <span className="inline-block px-3 py-1.5 bg-oxford text-white text-[10px] font-black uppercase rounded-xl tracking-widest">
-                                                {team.dept}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <span className={cn(
-                                                "inline-block px-3 py-1.5 text-[10px] font-black uppercase rounded-xl tracking-widest",
-                                                team.status === 'Selected' ? "bg-green-100 text-green-700" :
-                                                team.status === 'Rejected' ? "bg-red-100 text-red-700" :
-                                                "bg-yellow-100 text-yellow-700"
-                                            )}>
-                                                {team.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => { setSelectedTeam(team); setIsViewModalOpen(true); }}
-                                                    className="p-2 sm:p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all active:scale-90 shadow-sm"
-                                                    title="View Details"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => { setSelectedTeam(team); setIsEditModalOpen(true); }}
-                                                    className="p-2 sm:p-2.5 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition-all active:scale-90 shadow-sm"
-                                                    title="Edit Team"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStatusUpdate(team.id, 'Selected')}
-                                                    className={cn(
-                                                        "p-2 sm:p-2.5 rounded-xl transition-all active:scale-90 shadow-sm",
-                                                        team.status === 'Selected' ? "bg-green-600 text-white" : "bg-oxford/5 text-oxford hover:bg-oxford hover:text-white"
-                                                    )}
-                                                    title="Approve"
-                                                >
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteConfirmId(team.id)}
-                                                    className="p-2 sm:p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all active:scale-90 shadow-sm"
-                                                    title="Delete Team"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                <tr>
-                                    <td colSpan="5" className="p-20 text-center">
-                                        <p className="text-sm font-black text-oxford/20 uppercase tracking-[0.3em]">No teams found matching your search</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
                 </div>
             )}
 
@@ -975,7 +1002,24 @@ export default function FacultyDashboard() {
                                 <p className="text-sm font-black text-oxford uppercase leading-relaxed">{selectedTeam.statement}</p>
                             </div>
                             
-                            <div className="flex justify-end pt-4">
+                            {/* Action Buttons */}
+                            <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t-2 border-oxford/10">
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => { setIsEditModalOpen(true); }}
+                                        className="px-6 py-3 bg-amber-500 text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-600 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                        Edit Team
+                                    </button>
+                                    <button 
+                                        onClick={() => setDeleteConfirmId(selectedTeam.id)}
+                                        className="px-6 py-3 bg-red-500 text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-red-600 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete Team
+                                    </button>
+                                </div>
                                 <button 
                                     onClick={() => { setIsViewModalOpen(false); setSelectedTeam(null); setTeamMembers([]); }} 
                                     className="px-8 py-3 bg-oxford text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-oxford-dark transition-all shadow-lg active:scale-95"
@@ -1064,7 +1108,7 @@ export default function FacultyDashboard() {
 
             {/* Delete Statement Confirmation */}
             {isDeleteStatementModalOpen && selectedStatement && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
                         <div className="bg-red-600 p-6 text-white flex items-center gap-4">
                             <div className="p-3 bg-white/20 rounded-xl">
@@ -1101,7 +1145,7 @@ export default function FacultyDashboard() {
 
             {/* Delete Confirmation Modal */}
             {deleteConfirmId && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300 text-oxford">
+                <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300 text-oxford">
                     <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
                         <div className="bg-red-600 p-6 text-white flex items-center gap-4">
                             <div className="p-3 bg-white/20 rounded-xl">
@@ -1123,6 +1167,29 @@ export default function FacultyDashboard() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Notification Toast */}
+            {notification && (
+                <div className={cn(
+                    "fixed bottom-6 right-6 z-[100] p-4 rounded-xl shadow-2xl border-2 animate-in slide-in-from-bottom-4 fade-in duration-300",
+                    notification.type === 'success' ? "bg-green-50 border-green-200 text-green-800" :
+                    notification.type === 'error' ? "bg-red-50 border-red-200 text-red-800" :
+                    "bg-yellow-50 border-yellow-200 text-yellow-800"
+                )}>
+                    <div className="flex items-center gap-3">
+                        {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                        {notification.type === 'error' && <XCircle className="w-5 h-5 text-red-600" />}
+                        {notification.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+                        <p className="font-black text-sm uppercase tracking-wide">{notification.message}</p>
+                        <button 
+                            onClick={() => setNotification(null)}
+                            className="ml-2 p-1 hover:bg-black/10 rounded transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             )}

@@ -206,6 +206,33 @@ export default function Register() {
                 console.log('Members created successfully');
             }
 
+            // 5. Create welcome notification
+            console.log('Creating welcome notification...');
+            try {
+                const { error: notificationError } = await supabase
+                    .from('notifications')
+                    .insert([{
+                        recipient_id: userId,
+                        recipient_type: 'team',
+                        title: 'Welcome to SMCE Hackathon!',
+                        message: `Congratulations ${teamData.name}! Your team has been successfully registered for the hackathon. You can now browse and select problem statements from your dashboard.`,
+                        type: 'welcome',
+                        is_read: false,
+                        sender_type: 'system',
+                        team_id: teamRecord.id
+                    }]);
+
+                if (notificationError) {
+                    console.error('Error creating welcome notification:', notificationError);
+                    // Don't throw error here as registration succeeded
+                } else {
+                    console.log('Welcome notification created successfully');
+                }
+            } catch (error) {
+                console.error('Welcome notification error:', error);
+                // Don't throw error here as registration succeeded
+            }
+
             console.log('Registration completed successfully!');
             alert('Registration Successful! You can now login with your credentials.');
             navigate('/login');

@@ -1,18 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Settings, Plus, Edit, Trash2, Users, FileCheck, AlertCircle, Calendar } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../hooks/useAuth';
 
 export default function AdminDashboard() {
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        if (!isLoggedIn) {
-            navigate('/login');
-        }
-    }, [navigate]);
-
+    // With protected routes, authentication is handled automatically
+    const { user, getUserRole } = useAuth();
     const [activeTab, setActiveTab] = useState('statements');
 
     const PROBLEM_DATA = [
@@ -79,7 +72,7 @@ export default function AdminDashboard() {
                         <p className="text-xs sm:text-sm font-bold text-oxford tracking-tight">You have <span className="font-black underline">12 pending submissions</span> waiting for review.</p>
                     </div>
 
-                    <div className="overflow-x-auto border-4 border-oxford rounded-3xl shadow-2xl bg-white">
+                    <div className="overflow-x-auto border-2 border-transparent hover:border-oxford rounded-3xl shadow-lg hover:shadow-2xl bg-white transition-all">
                         <table className="w-full text-left">
                             <thead className="bg-oxford text-white border-b-4 border-oxford">
                                 <tr className="text-[9px] sm:text-xs font-black uppercase tracking-[0.2em]">

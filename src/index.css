@@ -43,14 +43,14 @@
     @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-screen-xl;
   }
 
-  /* Oxford Edge Hover Effect - Simple border change only */
+  /* Oxford Edge Hover Effect - Show border only on hover, keep shadow by default */
   .oxford-edge {
-    @apply border-2 border-oxford transition-colors duration-200;
+    @apply border-2 border-transparent shadow-lg transition-all duration-200;
   }
 
   @media (hover: hover) {
     .oxford-edge:hover {
-      @apply border-oxford-light border-[2.5px];
+      @apply border-oxford shadow-xl;
     }
   }
 

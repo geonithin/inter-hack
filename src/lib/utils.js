@@ -32,7 +32,7 @@ export function getSupabaseErrorMessage(error) {
 }
 
 // Utility to wait for profile creation with retry
-export async function waitForProfile(supabase, userId, maxRetries = 5) {
+export async function waitForProfile(supabase, userId, maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         const { data: profile, error } = await supabase
             .from('profiles')
@@ -43,8 +43,8 @@ export async function waitForProfile(supabase, userId, maxRetries = 5) {
         if (profile) return profile;
         if (error && !error.message.includes('row')) throw error;
         
-        // Wait progressively longer on each retry
-        await new Promise(resolve => setTimeout(resolve, (i + 1) * 500));
+        // Much faster retry delays: 100ms, 200ms, 300ms
+        await new Promise(resolve => setTimeout(resolve, (i + 1) * 100));
     }
     
     throw new Error('Profile not found after multiple attempts');
@@ -53,7 +53,7 @@ export async function waitForProfile(supabase, userId, maxRetries = 5) {
 // Utility to ensure user profile exists
 export async function ensureProfile(supabase, user) {
     try {
-        const profile = await waitForProfile(supabase, user.id, 3);
+        const profile = await waitForProfile(supabase, user.id, 2); // Reduce retries
         return profile;
     } catch (error) {
         // Try to create profile manually as fallback

@@ -1,17 +1,40 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { Bell, User, LogOut, Menu, X, UserPlus, ChevronLeft } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Bell, User, LogOut, Menu, X, UserPlus, ChevronLeft, ChevronDown, Home, FileText, BookOpen, Mail, Settings, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '../lib/utils';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import NotificationCenter from '../components/NotificationCenter';
+import { supabase } from '../lib/supabase';
 
 export default function Layout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [teamName, setTeamName] = useState('Loading...');
     const [isScrolled, setIsScrolled] = useState(false);
+    
+    // Notification state
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    
+    const userMenuRef = useRef(null);
     const location = useLocation();
     const navigate = useNavigate();
+    
+    // Use auth context instead of localStorage
+    const { isAuthenticated, getUserRole, profile, user, signOut } = useAuth();
+
+    // Handle click outside to close user menu
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setIsUserMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Handle scroll effect for navbar - throttled for performance
     useEffect(() => {
@@ -30,27 +53,22 @@ export default function Layout() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Fetch team name for logged in users
+    // Fetch team name for authenticated team leads
     useEffect(() => {
         const fetchTeamName = async () => {
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const userRole = localStorage.getItem('userRole');
-            
-            if (isLoggedIn && userRole === 'lead') {
+            if (isAuthenticated() && getUserRole() === 'lead' && user) {
                 try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        const { data: team, error } = await supabase
-                            .from('teams')
-                            .select('name')
-                            .eq('lead_id', user.id)
-                            .single();
-                            
-                        if (team && !error) {
-                            setTeamName(team.name);
-                        } else {
-                            setTeamName('Team Lead'); // Fallback if no team found
-                        }
+                    const { supabase } = await import('../lib/supabase');
+                    const { data: team, error } = await supabase
+                        .from('teams')
+                        .select('name')
+                        .eq('lead_id', user.id)
+                        .single();
+                        
+                    if (team && !error) {
+                        setTeamName(team.name);
+                    } else {
+                        setTeamName('Team Lead'); // Fallback if no team found
                     }
                 } catch (error) {
                     console.error('Error fetching team name:', error);
@@ -60,15 +78,73 @@ export default function Layout() {
         };
         
         fetchTeamName();
-    }, [location.pathname]); // Re-fetch when page changes
+    }, [isAuthenticated, getUserRole, user, location.pathname]); // Re-fetch when auth state or page changes
 
-    // Simulated Authentication Guard
+    // Fetch notifications and unread count - ONLY for team leads
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!isAuthenticated() || !user?.id || getUserRole() !== 'lead') return;
+            
+            try {
+                console.log('Layout: Fetching notifications for user:', user.id);
+                const { data, error } = await supabase
+                    .from('notifications')
+                    .select('*')
+                    .eq('recipient_id', user.id.toString())  // Convert to string
+                    .order('created_at', { ascending: false })
+                    .limit(10); // Only fetch recent notifications for header count
+
+                if (error) {
+                    console.error('Layout: Error fetching notifications:', error);
+                    return;
+                }
+
+                console.log('Layout: Successfully fetched notifications:', data);
+                setNotifications(data || []);
+                
+                // Count unread notifications
+                const unread = (data || []).filter(n => !n.is_read).length;
+                setUnreadCount(unread);
+            } catch (error) {
+                console.error('Layout: Error in fetchNotifications:', error);
+            }
+        };
+
+        fetchNotifications();
+
+        // Subscribe to real-time notifications for this user - only if team lead
+        let subscription = null;
+        if (isAuthenticated() && user?.id && getUserRole() === 'lead' && !window.notificationChannel) {
+            console.log('Layout: Setting up notification subscription');
+            subscription = supabase
+                .channel('notifications_layout')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `recipient_id=eq.${user.id.toString()}`
+                    },
+                    () => {
+                        setTimeout(fetchNotifications, 300); // Refresh notifications on any change
+                    }
+                )
+                .subscribe();
+        }
+
+        return () => {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+        };
+    }, [isAuthenticated, user?.id, getUserRole]);
+
+    // Dashboard access handler using auth context
     const handleDashboardAccess = () => {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const userRole = localStorage.getItem('userRole');
-
-        if (isLoggedIn) {
-            if (userRole === 'faculty') {
+        if (isAuthenticated()) {
+            const role = getUserRole();
+            if (role === 'faculty' || role === 'admin') {
                 navigate('/faculty');
             } else {
                 navigate('/dashboard');
@@ -78,9 +154,35 @@ export default function Layout() {
         }
     };
 
+    // Handle logout
+    const handleLogout = async () => {
+        console.log('Logout clicked');
+        
+        // Close menus immediately
+        setIsUserMenuOpen(false);
+        setIsMobileMenuOpen(false);
+        
+        try {
+            console.log('Calling signOut...');
+            const result = await signOut();
+            console.log('SignOut result:', result);
+            
+            // Wait a bit longer to ensure auth state is fully cleared
+            setTimeout(() => {
+                console.log('Navigating to home after logout');
+                navigate('/', { replace: true });
+            }, 200);
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Still navigate away even if logout fails
+            navigate('/', { replace: true });
+        }
+    };
+
     const isStrictAuthPage = ['/login', '/register'].includes(location.pathname);
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = isAuthenticated();
+    const userRole = getUserRole();
 
     return (
         <div className="min-h-screen bg-white flex flex-col">
@@ -89,8 +191,8 @@ export default function Layout() {
                 "bg-white text-oxford sticky top-0 z-50 transition-all duration-150",
                 isScrolled ? "shadow-lg backdrop-blur-xl bg-white/70" : "shadow-sm bg-white/90 backdrop-blur-sm"
             )}>
-                <div className="container-wide h-12 sm:h-16 flex items-center justify-between">
-                    <div className="flex items-center">
+                <div className="px-4 sm:px-6 max-w-none w-full h-12 sm:h-16 flex items-center justify-between pr-0">
+                    <div className="flex items-center flex-shrink-0">
                         <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
                             <div className="p-1 sm:p-1 bg-white rounded-lg shadow-lg border-2 border-oxford flex items-center justify-center">
                                 <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-8 sm:h-8 object-contain" />
@@ -104,46 +206,93 @@ export default function Layout() {
 
                     {/* Desktop Nav - Hidden on Auth Pages to keep focus */}
                     {!isStrictAuthPage && (
-                        <nav className="hidden lg:flex items-center space-x-8 h-full">
-                            <button onClick={() => navigate('/')} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Home</button>
-                            <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('rules')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Rules</button>
-                            <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('guidelines')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Guidelines</button>
-                            <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Contact</button>
-                            <button onClick={handleDashboardAccess} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">
-                                {userRole === 'faculty' ? 'Faculty Portal' : 'Dashboard'}
-                            </button>
+                        <div className="hidden lg:flex items-center justify-end flex-1 space-x-6">
+                            <nav className="flex items-center space-x-6">
+                                <button onClick={() => navigate('/')} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Home</button>
+                                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Contact</button>
+                                <button onClick={handleDashboardAccess} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">
+                                    Dashboard
+                                </button>
+                            </nav>
 
-                            {/* Conditioned Dashboard Info & Logout */}
+                            {/* User Profile Menu - Right Side */}
                             {isLoggedIn && (
-                                <div className="flex items-center space-x-4 border-l-2 border-oxford/10 pl-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                    <button
-                                        onClick={() => setIsNotificationsOpen(true)}
-                                        className="relative p-2.5 hover:bg-oxford/5 rounded-2xl transition-all group"
-                                    >
-                                        <Bell className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                                        <span className="absolute top-1.5 right-1.5 bg-oxford text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">3</span>
-                                    </button>
+                                <div className="flex items-center border-l-2 border-oxford/10 pl-3 animate-in fade-in slide-in-from-right-4 duration-500">
+                                    {/* User Profile Dropdown */}
+                                    <div className="relative" ref={userMenuRef}>
+                                        <button
+                                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                            className="relative flex items-center space-x-2 px-2 py-2 hover:bg-oxford/5 rounded-2xl transition-all border-2 border-transparent hover:border-oxford/20 mr-0"
+                                        >
+                                            <div className="p-1.5 bg-oxford text-white rounded-xl">
+                                                <User className="w-4 h-4" />
+                                            </div>
+                                            <ChevronDown className={cn("w-4 h-4 transition-transform", isUserMenuOpen && "rotate-180")} />
+                                            {/* Notification Badge - Only for team leads */}
+                                            {userRole === 'lead' && unreadCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
+                                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                                </span>
+                                            )}
+                                        </button>
 
-                                    <div className="flex items-center space-x-3 px-3 py-1.5 bg-oxford/5 rounded-2xl border-2 border-transparent hover:border-oxford/20 transition-all cursor-pointer">
-                                        <div className="text-right">
-                                            <p className="text-[8px] font-black leading-none uppercase opacity-50 tracking-[0.2em] mb-1">
-                                                {userRole === 'faculty' ? 'Selection Committee' : 'Team Lead'}
-                                            </p>
-                                            <p className="text-xs font-black uppercase tracking-tight">
-                                                {userRole === 'faculty' ? 'Dr. Robert Wilson' : teamName}
-                                            </p>
-                                        </div>
-                                        <div className="p-1.5 bg-oxford text-white rounded-xl">
-                                            <User className="w-4 h-4" />
-                                        </div>
+                                        {isUserMenuOpen && (
+                                            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-lg hover:shadow-xl border-2 border-transparent hover:border-oxford/20 py-2 z-50 animate-in zoom-in-95 slide-in-from-top-2 duration-200 transition-all">
+                                                {/* User Profile Info */}
+                                                <div className="px-4 py-3 border-b border-oxford/10">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="p-2 bg-oxford text-white rounded-xl">
+                                                            <User className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <p className="text-[8px] font-black leading-none uppercase opacity-50 tracking-[0.2em] mb-1">
+                                                                {userRole === 'faculty' ? 'Selection Committee' : 'Team Lead'}
+                                                            </p>
+                                                            <p className="text-sm font-black uppercase tracking-tight">
+                                                                {userRole === 'faculty' ? (profile?.full_name || 'Dr. Robert Wilson') : teamName}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Menu Options */}
+                                                <button 
+                                                    onClick={() => { handleDashboardAccess(); setIsUserMenuOpen(false); }} 
+                                                    className="w-full text-left px-4 py-2.5 hover:bg-oxford/5 text-oxford font-black uppercase text-xs tracking-widest transition-all"
+                                                >
+                                                    {userRole === 'faculty' ? 'Faculty Portal' : 'Dashboard'}
+                                                </button>
+                                                
+                                                {/* Notifications - Only for team leads */}
+                                                {userRole === 'lead' && (
+                                                    <button 
+                                                        onClick={() => { setIsNotificationsOpen(true); setIsUserMenuOpen(false); }} 
+                                                        className="w-full text-left px-4 py-2.5 hover:bg-oxford/5 text-oxford font-black uppercase text-xs tracking-widest transition-all flex items-center justify-between"
+                                                    >
+                                                        <span>Notifications</span>
+                                                        {unreadCount > 0 && (
+                                                            <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                )}
+
+                                                {/* Logout */}
+                                                <div className="border-t border-oxford/10 my-1"></div>
+                                                <button 
+                                                    onClick={handleLogout} 
+                                                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Sign Out
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <button onClick={() => { localStorage.removeItem('isLoggedIn'); localStorage.removeItem('userRole'); navigate('/'); }} className="p-2.5 hover:bg-red-50 text-red-600 rounded-2xl transition-all group" title="Logout">
-                                        <LogOut className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                    </button>
                                 </div>
                             )}
-                        </nav>
+                        </div>
                     )}
 
                     {/* Mobile Menu Toggle - Always Available Everywhere */}
@@ -153,11 +302,19 @@ export default function Layout() {
                 </div>
             </header>
 
-            {/* Notifications Overlay */}
-            <NotificationCenter
-                isOpen={isNotificationsOpen}
-                onClose={() => setIsNotificationsOpen(false)}
-            />
+            {/* Notification Center - Only for team leads */}
+            {getUserRole() === 'lead' && (
+                <NotificationCenter
+                    isOpen={isNotificationsOpen}
+                    onClose={() => setIsNotificationsOpen(false)}
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    onNotificationUpdate={(updatedNotifications, newUnreadCount) => {
+                        setNotifications(updatedNotifications);
+                        setUnreadCount(newUnreadCount);
+                    }}
+                />
+            )}
 
             {/* Mobile Menu - Side Drawer Implementation */}
             {isMobileMenuOpen && (
@@ -167,105 +324,128 @@ export default function Layout() {
                         className="absolute inset-0 backdrop-blur-xl animate-in fade-in duration-150"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
-                    {/* Floating Mini Menu Card */}
-                    <div className="absolute top-4 right-4 w-[80%] max-w-[260px] bg-oxford p-4 rounded-[2rem] flex flex-col shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-200 border-2 border-white/10">
-                        <div className="flex justify-between items-center mb-6 pb-3 border-b border-white/5">
-                            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Menu</p>
-                            <button className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all" onClick={() => setIsMobileMenuOpen(false)}>
+                    {/* Enhanced Compact Mobile Menu Card */}
+                    <div className="absolute top-4 right-4 w-[75%] max-w-[240px] bg-gradient-to-br from-slate-100 to-slate-50 backdrop-blur-sm p-4 rounded-2xl flex flex-col shadow-lg hover:shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-300 border-2 border-transparent hover:border-gray-300 transition-all">
+                        {/* Compact Header */}
+                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
+                            <p className="text-gray-800 font-bold text-sm">Menu</p>
+                            <button className="p-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 active:scale-95 transition-all" onClick={() => setIsMobileMenuOpen(false)}>
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <nav className="space-y-2">
+                        
+                        {/* Compact Navigation Items */}
+                        <nav className="space-y-1 mb-4">
                             <button
                                 onClick={() => { navigate('/'); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                                className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
                             >
-                                <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                Home
+                                <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                    <Home className="w-4 h-4" />
+                                </div>
+                                <p className="font-medium text-sm">Home</p>
                             </button>
-                            <button
-                                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('rules')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
-                            >
-                                <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                Rules
-                            </button>
-                            <button
-                                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('guidelines')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
-                            >
-                                <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                Guidelines
-                            </button>
+                            
                             <button
                                 onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                                className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
                             >
-                                <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                Contact
+                                <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                    <Mail className="w-4 h-4" />
+                                </div>
+                                <p className="font-medium text-sm">Contact</p>
                             </button>
 
                             {/* Dynamic Menu Items based on Auth State */}
                             {isLoggedIn ? (
                                 <>
-                                    <button
-                                        onClick={() => { handleDashboardAccess(); setIsMobileMenuOpen(false); }}
-                                        className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
-                                    >
-                                        <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                        {userRole === 'faculty' ? 'Faculty Portal' : 'Dashboard'}
-                                    </button>
-                                    <button
-                                        onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
-                                        className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center justify-between"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                            Alerts
-                                        </div>
-                                        <span className="bg-white text-oxford text-[9px] font-black px-1.5 py-0.5 rounded-full">3</span>
-                                    </button>
+                                    <div className="border-t border-gray-200 pt-2 mt-2">
+                                        <button
+                                            onClick={() => { handleDashboardAccess(); setIsMobileMenuOpen(false); }}
+                                            className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
+                                        >
+                                            <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                                <Settings className="w-4 h-4" />
+                                            </div>
+                                            <p className="font-medium text-sm">Dashboard</p>
+                                        </button>
+                                    </div>
+                                    
+                                    {/* Notifications - Only for team leads */}
+                                    {userRole === 'lead' && (
+                                        <button
+                                            onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
+                                            className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center justify-between group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors relative">
+                                                    <AlertCircle className="w-4 h-4" />
+                                                    {unreadCount > 0 && (
+                                                        <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs font-bold px-1 py-0.5 rounded-full border border-slate-100">
+                                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="font-medium text-sm">Alerts</p>
+                                            </div>
+                                            {unreadCount > 0 && (
+                                                <div className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                                </div>
+                                            )}
+                                        </button>
+                                    )}
                                 </>
                             ) : (
                                 <>
-                                    <button
-                                        onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}
-                                        className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
-                                    >
-                                        <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                        Sign In
-                                    </button>
+                                    <div className="border-t border-gray-200 pt-2 mt-2">
+                                        <button
+                                            onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}
+                                            className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
+                                        >
+                                            <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                                <User className="w-4 h-4" />
+                                            </div>
+                                            <p className="font-medium text-sm">Sign In</p>
+                                        </button>
+                                    </div>
+                                    
                                     <button
                                         onClick={() => { navigate('/register'); setIsMobileMenuOpen(false); }}
-                                        className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/5 text-white font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3"
+                                        className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
                                     >
-                                        <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                        Register
+                                        <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                            <UserPlus className="w-4 h-4" />
+                                        </div>
+                                        <p className="font-medium text-sm">Register</p>
                                     </button>
                                 </>
                             )}
                         </nav>
 
+                        {/* Compact User Profile Section */}
                         {isLoggedIn && (
-                            <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-3">
-                                <div className="flex items-center space-x-2 text-white px-1">
-                                    <div className="p-2 bg-white/5 rounded-lg">
-                                        <User className="w-4 h-4 text-white/40" />
+                            <div className="border-t border-gray-200 pt-3">
+                                <div className="flex items-center gap-3 mb-3 p-2.5 bg-white/50 rounded-xl">
+                                    <div className="p-1.5 bg-gray-100 rounded-lg">
+                                        <User className="w-4 h-4 text-gray-700" />
                                     </div>
-                                    <div className="text-left overflow-hidden">
-                                        <p className="text-[7px] font-black uppercase opacity-30 tracking-[0.2em] leading-none mb-0.5">
-                                            {userRole === 'faculty' ? 'Selection Committee' : 'Team Lead'}
+                                    <div className="flex-1">
+                                        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                            {userRole === 'faculty' ? 'Committee' : 'Team Lead'}
                                         </p>
-                                        <p className="text-xs font-black uppercase tracking-tight truncate">
-                                            {userRole === 'faculty' ? 'Dr. Robert Wilson' : teamName}
+                                        <p className="text-gray-800 text-xs font-bold truncate">
+                                            {userRole === 'faculty' ? (profile?.full_name || 'Dr. Robert Wilson') : teamName}
                                         </p>
                                     </div>
                                 </div>
+                                
                                 <button
-                                    onClick={() => { localStorage.removeItem('isLoggedIn'); localStorage.removeItem('userRole'); navigate('/'); setIsMobileMenuOpen(false); }}
-                                    className="w-full py-2.5 bg-red-500/90 text-white rounded-lg font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all hover:bg-red-600"
+                                    onClick={handleLogout}
+                                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-medium text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all duration-200"
                                 >
-                                    <LogOut className="w-3.5 h-3.5" /> Sign Out
+                                    <LogOut className="w-4 h-4" />
+                                    Sign Out
                                 </button>
                             </div>
                         )}

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, ShieldCheck } from 'lucide-react';
-import { cn, getSupabaseErrorMessage, ensureProfile } from '../lib/utils';
-import { supabase } from '../lib/supabase';
+import { cn, getSupabaseErrorMessage } from '../lib/utils';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
     const navigate = useNavigate();
+    const { signIn } = useAuth();
     const [role, setRole] = useState('lead'); // This is just for the UI toggle initial state
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -16,64 +17,19 @@ export default function Login() {
         setIsLoading(true);
 
         try {
-            // Handle faculty login differently - check against faculty table
-            if (role === 'faculty') {
-                // Check if it's faculty ID format (FAC001) or email
-                const isFacultyId = /^FAC\d+$/.test(email.toUpperCase());
-                
-                let query = supabase.from('faculty').select('*').eq('is_active', true);
-                
-                if (isFacultyId) {
-                    query = query.eq('faculty_id', email.toUpperCase());
-                } else {
-                    query = query.eq('email', email);
-                }
-                
-                const { data: facultyData, error: facultyError } = await query.single();
-                
-                if (facultyError || !facultyData) {
-                    throw new Error('Invalid faculty credentials');
-                }
-                
-                // Simple password check (in production, this should be hashed)
-                if (facultyData.password !== password) {
-                    throw new Error('Invalid faculty credentials');
-                }
-                
-                // Set session data for faculty
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userRole', 'faculty');
-                localStorage.setItem('facultyData', JSON.stringify(facultyData));
-                
-                navigate('/faculty');
-                return;
-            }
+            const { data, error } = await signIn(email, password, role);
+
+            if (error) throw error;
+
+            // Immediately show success - navigation will happen automatically
+            console.log('Login successful - redirecting...');
             
-            // Handle regular user login with Supabase auth
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (authError) throw authError;
-
-            // Ensure profile exists and get user role
-            const profile = await ensureProfile(supabase, authData.user);
-            
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userRole', profile.role);
-
-            if (profile.role === 'faculty' || profile.role === 'admin') {
-                navigate('/faculty');
-            } else {
-                navigate('/dashboard');
-            }
         } catch (error) {
             console.error('Login error:', error);
             alert(error.message || getSupabaseErrorMessage(error));
-        } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Only stop loading on error
         }
+        // Don't set loading to false on success - let the auth state change handle it
     };
 
     return (
@@ -140,7 +96,10 @@ export default function Login() {
                             )}
                         >
                             {isLoading ? (
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                                <>
+                                    <div className="w-5 h-5 sm:w-6 sm:h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span className="ml-2">Signing you in...</span>
+                                </>
                             ) : (
                                 'Proceed with Email'
                             )}
