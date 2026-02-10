@@ -216,7 +216,7 @@ export default function Register() {
                         recipient_type: 'team',
                         title: 'Welcome to SMCE Hackathon!',
                         message: `Congratulations ${teamData.name}! Your team has been successfully registered for the hackathon. You can now browse and select problem statements from your dashboard.`,
-                        type: 'welcome',
+                        type: 'info',
                         is_read: false,
                         sender_type: 'system',
                         team_id: teamRecord.id
@@ -245,7 +245,7 @@ export default function Register() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto mt-8 mb-16 px-4 px-6 animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="max-w-5xl mx-auto mt-8 mb-16 px-6 animate-in fade-in slide-in-from-bottom-6 duration-300">
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl oxford-edge border-4">
                 {/* Header */}
                 <div className="bg-oxford p-4 sm:p-6 text-white flex items-center justify-between">
@@ -302,7 +302,7 @@ export default function Register() {
                                             required
                                             value={teamSize}
                                             onChange={(e) => setTeamSize(parseInt(e.target.value))}
-                                            className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base bg-emerald-50/50 border-emerald-200"
+                                            className="w-full p-3 sm:p-4 border-2 border-emerald-200 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base bg-emerald-50/50"
                                         >
                                             {[2, 3, 4, 5].map(size => (
                                                 <option key={size} value={size}>{size} Members (Lead + {size - 1} Others)</option>

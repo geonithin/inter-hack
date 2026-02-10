@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
+import TeamDetails from './pages/TeamDetails';
+import ErrorBoundary from './components/ErrorBoundary';
 import { 
   ProtectedRoute, 
   TeamRoute, 
@@ -19,73 +21,83 @@ import {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            {/* Public routes */}
-            <Route 
-              path="/" 
-              element={
-                <PublicRoute>
-                  <Landing />
-                </PublicRoute>
-              } 
-            />
-            
-            {/* Auth routes - only accessible when not logged in */}
-            <Route 
-              path="/login" 
-              element={
-                <PublicOnlyRoute>
-                  <Login />
-                </PublicOnlyRoute>
-              } 
-            />
-            <Route 
-              path="/register" 
-              element={
-                <PublicOnlyRoute>
-                  <Register />
-                </PublicOnlyRoute>
-              } 
-            />
-            
-            {/* Protected dashboard routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <TeamRoute>
-                  <Dashboard />
-                </TeamRoute>
-              } 
-            />
-            <Route 
-              path="/faculty" 
-              element={
-                <FacultyRoute>
-                  <FacultyDashboard />
-                </FacultyRoute>
-              } 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              } 
-            />
-            
-            {/* Unauthorized page */}
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            
-            {/* Catch-all redirect to home */}
-            <Route path="*" element={<Landing />} />
-          </Route>
-        </Routes>
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            <Route element={<Layout />}>
+              {/* Public routes */}
+              <Route 
+                path="/" 
+                element={
+                  <PublicRoute>
+                    <Landing />
+                  </PublicRoute>
+                } 
+              />
+              
+              {/* Auth routes - only accessible when not logged in */}
+              <Route 
+                path="/login" 
+                element={
+                  <PublicOnlyRoute>
+                    <Login />
+                  </PublicOnlyRoute>
+                } 
+              />
+              <Route 
+                path="/register" 
+                element={
+                  <PublicOnlyRoute>
+                    <Register />
+                  </PublicOnlyRoute>
+                } 
+              />
+              
+              {/* Protected dashboard routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <TeamRoute>
+                    <Dashboard />
+                  </TeamRoute>
+                } 
+              />
+              <Route 
+                path="/faculty" 
+                element={
+                  <FacultyRoute>
+                    <FacultyDashboard />
+                  </FacultyRoute>
+                } 
+              />
+              <Route 
+                path="/faculty/team/:id" 
+                element={
+                  <FacultyRoute>
+                    <TeamDetails />
+                  </FacultyRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Unauthorized page */}
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              
+              {/* Catch-all redirect to home */}
+              <Route path="*" element={<Landing />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

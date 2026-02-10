@@ -92,7 +92,7 @@ export default function Login() {
                             disabled={isLoading}
                             className={cn(
                                 "w-full text-white font-black py-3.5 sm:py-4.5 rounded-xl sm:rounded-2xl transition-all shadow-xl uppercase tracking-[0.2em] text-[10px] sm:text-xs mt-2 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed",
-                                role === 'lead' ? "bg-oxford hover:bg-oxford-dark" : "bg-emerald-600 hover:bg-emerald-700"
+                                role === 'lead' ? "bg-oxford hover:bg-oxford-dark" : "bg-oxford hover:bg-oxford-dark"
                             )}
                         >
                             {isLoading ? (

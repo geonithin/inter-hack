@@ -3,7 +3,7 @@ import { Send, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
-export default function SubmissionForm({ problemStatement, onCancel }) {
+export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuccess }) {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -31,8 +31,8 @@ export default function SubmissionForm({ problemStatement, onCancel }) {
 
             if (teamError) throw teamError;
 
-            // Insert submission
-            const { error: submitError } = await supabase
+            // Insert submission with proper error handling
+            const { data: insertedData, error: submitError } = await supabase
                 .from('submissions')
                 .insert([{
                     team_id: team.id,
@@ -40,12 +40,22 @@ export default function SubmissionForm({ problemStatement, onCancel }) {
                     title: formData.title,
                     description: formData.description,
                     tech_stack: formData.techStack,
-                    solution_link: formData.solutionLink
-                }]);
+                    solution_link: formData.solutionLink || null,
+                    status: 'submitted'
+                }])
+                .select()
+                .single();
 
-            if (submitError) throw submitError;
+            if (submitError) {
+                console.error('Submit error:', submitError);
+                throw new Error(`Submission failed: ${submitError.message}`);
+            }
 
             setIsSubmitted(true);
+            // Call the success callback with the submission data
+            if (onSubmitSuccess) {
+                onSubmitSuccess(insertedData);
+            }
         } catch (error) {
             console.error('Submission error:', error);
             alert(`Failed to submit: ${error.message}`);

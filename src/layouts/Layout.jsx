@@ -80,10 +80,10 @@ export default function Layout() {
         fetchTeamName();
     }, [isAuthenticated, getUserRole, user, location.pathname]); // Re-fetch when auth state or page changes
 
-    // Fetch notifications and unread count - ONLY for team leads
+    // Fetch notifications and unread count - for all authenticated users
     useEffect(() => {
         const fetchNotifications = async () => {
-            if (!isAuthenticated() || !user?.id || getUserRole() !== 'lead') return;
+            if (!isAuthenticated() || !user?.id) return;
             
             try {
                 console.log('Layout: Fetching notifications for user:', user.id);
@@ -112,33 +112,13 @@ export default function Layout() {
 
         fetchNotifications();
 
-        // Subscribe to real-time notifications for this user - only if team lead
-        let subscription = null;
-        if (isAuthenticated() && user?.id && getUserRole() === 'lead' && !window.notificationChannel) {
-            console.log('Layout: Setting up notification subscription');
-            subscription = supabase
-                .channel('notifications_layout')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'notifications',
-                        filter: `recipient_id=eq.${user.id.toString()}`
-                    },
-                    () => {
-                        setTimeout(fetchNotifications, 300); // Refresh notifications on any change
-                    }
-                )
-                .subscribe();
-        }
+        // Use simple polling instead of WebSocket to avoid connection issues
+        const interval = setInterval(fetchNotifications, 15000); // Every 15 seconds
 
         return () => {
-            if (subscription) {
-                supabase.removeChannel(subscription);
-            }
+            clearInterval(interval);
         };
-    }, [isAuthenticated, user?.id, getUserRole]);
+    }, [isAuthenticated, user?.id]);
 
     // Dashboard access handler using auth context
     const handleDashboardAccess = () => {
@@ -192,9 +172,9 @@ export default function Layout() {
                 isScrolled ? "shadow-lg backdrop-blur-xl bg-white/70" : "shadow-sm bg-white/90 backdrop-blur-sm"
             )}>
                 <div className="px-4 sm:px-6 max-w-none w-full h-12 sm:h-16 flex items-center justify-between pr-0">
-                    <div className="flex items-center flex-shrink-0">
+                    <div className="flex items-center shrink-0">
                         <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
-                            <div className="p-1 sm:p-1 bg-white rounded-lg shadow-lg border-2 border-oxford flex items-center justify-center">
+                            <div className="p-1 sm:p-1 bg-white rounded-lg border-2 border-oxford flex items-center justify-center">
                                 <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-8 sm:h-8 object-contain" />
                             </div>
                             <div className="space-y-0.5">
@@ -228,8 +208,8 @@ export default function Layout() {
                                                 <User className="w-4 h-4" />
                                             </div>
                                             <ChevronDown className={cn("w-4 h-4 transition-transform", isUserMenuOpen && "rotate-180")} />
-                                            {/* Notification Badge - Only for team leads */}
-                                            {userRole === 'lead' && unreadCount > 0 && (
+                                            {/* Notification Badge - For all users */}
+                                            {unreadCount > 0 && (
                                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
                                                     {unreadCount > 99 ? '99+' : unreadCount}
                                                 </span>
@@ -256,15 +236,8 @@ export default function Layout() {
                                                 </div>
 
                                                 {/* Menu Options */}
-                                                <button 
-                                                    onClick={() => { handleDashboardAccess(); setIsUserMenuOpen(false); }} 
-                                                    className="w-full text-left px-4 py-2.5 hover:bg-oxford/5 text-oxford font-black uppercase text-xs tracking-widest transition-all"
-                                                >
-                                                    {userRole === 'faculty' ? 'Faculty Portal' : 'Dashboard'}
-                                                </button>
-                                                
-                                                {/* Notifications - Only for team leads */}
-                                                {userRole === 'lead' && (
+                                                {/* Notifications - For all users */}
+                                                {
                                                     <button 
                                                         onClick={() => { setIsNotificationsOpen(true); setIsUserMenuOpen(false); }} 
                                                         className="w-full text-left px-4 py-2.5 hover:bg-oxford/5 text-oxford font-black uppercase text-xs tracking-widest transition-all flex items-center justify-between"
@@ -276,7 +249,7 @@ export default function Layout() {
                                                             </span>
                                                         )}
                                                     </button>
-                                                )}
+                                                }
 
                                                 {/* Logout */}
                                                 <div className="border-t border-oxford/10 my-1"></div>
@@ -302,8 +275,8 @@ export default function Layout() {
                 </div>
             </header>
 
-            {/* Notification Center - Only for team leads */}
-            {getUserRole() === 'lead' && (
+            {/* Notification Center - For all authenticated users */}
+            {isLoggedIn && (
                 <NotificationCenter
                     isOpen={isNotificationsOpen}
                     onClose={() => setIsNotificationsOpen(false)}
@@ -318,14 +291,14 @@ export default function Layout() {
 
             {/* Mobile Menu - Side Drawer Implementation */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden fixed inset-0 z-[60]">
+                <div className="lg:hidden fixed inset-0 z-60">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 backdrop-blur-xl animate-in fade-in duration-150"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
                     {/* Enhanced Compact Mobile Menu Card */}
-                    <div className="absolute top-4 right-4 w-[75%] max-w-[240px] bg-gradient-to-br from-slate-100 to-slate-50 backdrop-blur-sm p-4 rounded-2xl flex flex-col shadow-lg hover:shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-300 border-2 border-transparent hover:border-gray-300 transition-all">
+                    <div className="absolute top-4 right-4 w-[75%] max-w-60 bg-linear-to-br from-slate-100 to-slate-50 backdrop-blur-sm p-4 rounded-2xl flex flex-col shadow-lg hover:shadow-2xl animate-in zoom-in-95 slide-in-from-top-2 duration-300 border-2 border-transparent hover:border-gray-300 transition-all">
                         {/* Compact Header */}
                         <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
                             <p className="text-gray-800 font-bold text-sm">Menu</p>
@@ -359,20 +332,8 @@ export default function Layout() {
                             {/* Dynamic Menu Items based on Auth State */}
                             {isLoggedIn ? (
                                 <>
-                                    <div className="border-t border-gray-200 pt-2 mt-2">
-                                        <button
-                                            onClick={() => { handleDashboardAccess(); setIsMobileMenuOpen(false); }}
-                                            className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
-                                        >
-                                            <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
-                                                <Settings className="w-4 h-4" />
-                                            </div>
-                                            <p className="font-medium text-sm">Dashboard</p>
-                                        </button>
-                                    </div>
-                                    
-                                    {/* Notifications - Only for team leads */}
-                                    {userRole === 'lead' && (
+                                    {/* Notifications - For all users */}
+                                    {
                                         <button
                                             onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
                                             className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center justify-between group"
@@ -394,7 +355,7 @@ export default function Layout() {
                                                 </div>
                                             )}
                                         </button>
-                                    )}
+                                    }
                                 </>
                             ) : (
                                 <>
@@ -472,17 +433,10 @@ export default function Layout() {
 
             {/* Footer - Hidden on Auth Pages to keep focus */}
             {!isStrictAuthPage && (
-                <footer className="bg-oxford text-white py-4 mt-6">
+                <footer className="bg-oxford text-white py-3 mt-8">
                     <div className="container-wide">
-                        <div className="mb-3 pb-3 border-b border-white/10">
-                            <div className="flex items-center justify-center">
-                                <p className="text-white/40 text-xs uppercase font-bold leading-relaxed text-center">
-                                    Pioneering the next generation of innovators at Stella Mary's College of Engineering.
-                                </p>
-                            </div>
-                        </div>
                         <div className="flex items-center justify-center">
-                            <p className="text-[9px] font-black uppercase opacity-30 tracking-[0.3em]">© 2024 SMCE HACKATHON. ALL RIGHTS RESERVED.</p>
+                            <p className="text-xs font-medium text-white/60">© 2026 SMCE Hackathon. All Rights Reserved.</p>
                         </div>
                     </div>
                 </footer>

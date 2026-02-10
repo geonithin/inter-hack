@@ -14,13 +14,13 @@ export const AuthProvider = ({ children }) => {
   const [initialized, setInitialized] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Initialize auth state on mount
+  // Initialize auth state on mount - optimized for speed
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Set a timeout for the entire initialization process
+        // Reduce timeout for faster loading
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 2000)
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 1000)
         );
         
         const authPromise = (async () => {
@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }) => {
           }
 
           if (session?.user) {
-            await handleUserSession(session.user);
+            // Don't await - let user session load in background for faster UI
+            handleUserSession(session.user);
           } else {
             // No session - we can load immediately
             setLoading(false);
@@ -45,9 +46,9 @@ export const AuthProvider = ({ children }) => {
         
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Don't block the UI for auth errors
-      } finally {
+        // Don't block the UI for auth errors - fail fast
         setLoading(false);
+      } finally {
         setInitialized(true);
       }
     };
@@ -95,16 +96,16 @@ export const AuthProvider = ({ children }) => {
   // Fast profile creation with optimized retry
   const ensureProfileFast = async (user) => {
     try {
-      // First, try to get existing profile with timeout
+      // First, try to get existing profile with shorter timeout
       const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
         
-      // Add a timeout to profile fetch
+      // Increase timeout for more reliable profile fetch
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 1500)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
       );
       
       const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);

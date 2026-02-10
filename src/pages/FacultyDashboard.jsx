@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Users, FileText, CheckCircle2, XCircle, Search, Filter, ArrowUpRight, Edit, Trash2, Eye, X, Plus, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, FileText, CheckCircle2, XCircle, Search, Filter, ArrowUpRight, Edit, Trash2, X, Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function FacultyDashboard() {
     const { isAuthenticated, getUserRole, user } = useAuth();
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [deptFilter, setDeptFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -19,6 +23,7 @@ export default function FacultyDashboard() {
     const [selectedStatement, setSelectedStatement] = useState(null);
     const [teamMembers, setTeamMembers] = useState([]);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+    const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState('teams'); // 'teams' or 'statements'
     const [error, setError] = useState(null);
@@ -57,6 +62,19 @@ export default function FacultyDashboard() {
         fetchData();
     }, [isAuthenticated, user, getUserRole]);
     
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if clicked element is not part of any status dropdown
+            if (!event.target.closest('.status-dropdown-container')) {
+                setOpenStatusDropdown(null);
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
     const fetchData = async () => {
         setIsLoading(true);
         setError(null);
@@ -90,14 +108,15 @@ export default function FacultyDashboard() {
             
             setProblemStatements(statementsData);
             
-            // Fetch teams with problem statement info (without profiles join for now)
+            // Fetch teams with problem statement info and profiles join
             let teamsData = [];
             try {
                 const { data, error: teamsError } = await supabase
                     .from('teams')
                     .select(`
                         *,
-                        problem_statements(title, department)
+                        problem_statements(title, department),
+                        profiles!teams_lead_id_fkey(full_name, email)
                     `);
 
                 if (teamsError) {
@@ -116,11 +135,11 @@ export default function FacultyDashboard() {
             const processedTeams = teamsData.map(t => ({
                 id: t.id,
                 name: t.name || 'Unnamed Team',
-                lead: t.lead_name || 'Unknown', // Use lead_name field from teams table
-                leadEmail: t.lead_email || '',
+                lead: t.profiles?.full_name || 'Unknown', // Use joined profile name
+                leadEmail: t.profiles?.email || 'N/A', // Use joined profile email
                 statement: t.problem_statements?.title || 'Not Selected',
                 status: t.status || 'Pending',
-                dept: t.department || t.problem_statements?.department || 'N/A',
+                dept: t.department || t.problem_statements?.department || 'N/A', // Use team department first
                 year: t.year || '',
                 section: t.section || '',
                 lead_id: t.lead_id,
@@ -154,12 +173,6 @@ export default function FacultyDashboard() {
             console.error('Error fetching team members:', error);
             setTeamMembers([]);
         }
-    };
-    
-    const handleViewTeam = async (team) => {
-        setSelectedTeam(team);
-        await fetchTeamMembers(team.id);
-        setIsViewModalOpen(true);
     };
     
     const handleAddStatement = async (e) => {
@@ -404,12 +417,80 @@ export default function FacultyDashboard() {
         }
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
         setExporting(true);
-        setTimeout(() => {
+        try {
+            // Create new PDF document
+            const doc = new jsPDF('l', 'mm', 'a4'); // landscape, millimeters, A4
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SMCE Hackathon - Team Data Report', 14, 20);
+            
+            // Add generation date
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+            
+            // Prepare table data
+            const tableData = teams.map(team => [
+                team.name || 'N/A',
+                team.lead || 'N/A', // Use correct field from processed data
+                team.dept || 'N/A',
+                `${team.year || 'N/A'} - ${team.section || 'N/A'}`,
+                team.leadEmail || 'N/A', // Use correct field from processed data
+                team.status || 'Pending'
+            ]);
+            
+            // Add table
+            autoTable(doc, {
+                head: [['Team Name', 'Team Lead', 'Department', 'Year-Section', 'Email', 'Status']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [0, 52, 89], // oxford color in RGB
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    fontSize: 10
+                },
+                bodyStyles: {
+                    fontSize: 9
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 245, 245]
+                },
+                columnStyles: {
+                    0: { cellWidth: 45 },
+                    1: { cellWidth: 40 },
+                    2: { cellWidth: 25 },
+                    3: { cellWidth: 30 },
+                    4: { cellWidth: 55 },
+                    5: { cellWidth: 25 }
+                },
+                margin: { left: 14, right: 14 }
+            });
+            
+            // Add footer with statistics
+            const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : 35;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Total Teams: ${teams.length}`, 14, finalY + 15);
+            doc.text(`Selected: ${teams.filter(t => t.status === 'Selected').length}`, 14, finalY + 22);
+            doc.text(`Pending: ${teams.filter(t => t.status === 'Pending').length}`, 14, finalY + 29);
+            doc.text(`Rejected: ${teams.filter(t => t.status === 'Rejected').length}`, 14, finalY + 36);
+            
+            // Save the PDF
+            doc.save(`SMCE_Hackathon_Teams_${new Date().toISOString().split('T')[0]}.pdf`);
+            
+            showNotification('Team data exported successfully as PDF!', 'success');
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            showNotification('Failed to export PDF', 'error');
+        } finally {
             setExporting(false);
-            alert('Team data exported successfully as CSV!');
-        }, 1500);
+        }
     };
 
     // Calculate stats
@@ -505,33 +586,62 @@ export default function FacultyDashboard() {
     return (
         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-4 border-oxford pb-6">
-                <div className="space-y-1">
-                    <h1 className="text-2xl sm:text-4xl font-black text-oxford uppercase tracking-tighter">Faculty Portal</h1>
-                    <p className="text-[10px] sm:text-xs text-oxford/40 font-black uppercase tracking-[0.3em]">Institutional Oversight & Management</p>
+            <div className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl border-2 border-oxford/10 shadow-xl p-8 mb-8">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-5">
+                    <div className="absolute -top-4 -right-4 w-20 h-20 bg-oxford rounded-full"></div>
+                    <div className="absolute top-6 -left-6 w-12 h-12 bg-oxford rounded-full"></div>
+                    <div className="absolute bottom-4 right-16 w-8 h-8 bg-oxford rounded-full"></div>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                    {/* View Toggle */}
-                    <div className="flex bg-gray-50 p-1 rounded-xl border-2 border-oxford/10">
-                        <button
-                            onClick={() => setCurrentView('teams')}
-                            className={cn(
-                                "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
-                                currentView === 'teams' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
-                            )}
-                        >
-                            Teams
-                        </button>
-                        <button
-                            onClick={() => setCurrentView('statements')}
-                            className={cn(
-                                "px-6 py-3 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
-                                currentView === 'statements' ? "bg-oxford text-white shadow-lg" : "text-oxford/40 hover:text-oxford"
-                            )}
-                        >
-                            Statements
-                        </button>
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-oxford/10 backdrop-blur-sm rounded-xl border border-oxford/20">
+                                <Users className="w-8 h-8 text-oxford" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl sm:text-4xl font-black text-oxford uppercase tracking-tight">Faculty Portal</h1>
+                                <p className="text-sm text-oxford/60 font-medium mt-1">Institutional Oversight & Management</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 pl-16">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-oxford/70 font-semibold">
+                                Real-time Monitoring Active
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row items-end gap-4">
+                        {/* View Toggle */}
+                        <div className="flex bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl border-2 border-oxford/15 shadow-lg">
+                            <button
+                                onClick={() => setCurrentView('teams')}
+                                className={cn(
+                                    "px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center gap-2",
+                                    currentView === 'teams' 
+                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                )}
+                            >
+                                <Users className="w-4 h-4" />
+                                Teams
+                            </button>
+                            <button
+                                onClick={() => setCurrentView('statements')}
+                                className={cn(
+                                    "px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center gap-2",
+                                    currentView === 'statements' 
+                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                )}
+                            >
+                                <FileText className="w-4 h-4" />
+                                Statements
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -654,17 +764,23 @@ export default function FacultyDashboard() {
                                     <th className="p-5 border-l-2 border-white/10">Lead Details</th>
                                     <th className="p-5 border-l-2 border-white/10">Chosen Statement</th>
                                     <th className="p-5 border-l-2 border-white/10 text-center">Status</th>
-                                    <th className="p-5 border-l-2 border-white/10 text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y-2 divide-oxford/10">
                                 {filteredTeams.length > 0 ? filteredTeams.map((team) => (
                                     <tr key={team.id} className="hover:bg-oxford/2 transition-colors group">
                                         <td className="p-5 sm:p-6">
-                                            <p className="font-black text-oxford uppercase tracking-tight group-hover:text-oxford-light transition-all">{team.name}</p>
-                                            <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest mt-0.5">
-                                                {team.dept} | {team.year} - {team.section}
-                                            </p>
+                                            <button 
+                                                onClick={() => navigate(`/faculty/team/${team.id}`)}
+                                                className="text-left w-full hover:bg-oxford/5 rounded-lg p-2 -m-2 transition-all group/name"
+                                            >
+                                                <p className="font-black text-oxford uppercase tracking-tight group-hover/name:text-oxford-dark group-hover/name:underline transition-all cursor-pointer">
+                                                    {team.name}
+                                                </p>
+                                                <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest mt-0.5">
+                                                    {team.dept} | {team.year} - {team.section}
+                                                </p>
+                                            </button>
                                         </td>
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
                                             <p className="font-black text-oxford uppercase tracking-tight">{team.lead}</p>
@@ -674,45 +790,58 @@ export default function FacultyDashboard() {
                                             <p className="font-black text-oxford uppercase tracking-tight line-clamp-2 max-w-62.5">{team.statement}</p>
                                         </td>
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10 text-center">
-                                            <div className={cn(
-                                                "inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 font-black uppercase text-[9px] tracking-widest",
-                                                team.status === 'Selected' ? "bg-green-50 text-green-700 border-green-200" :
-                                                    team.status === 'Rejected' ? "bg-red-50 text-red-700 border-red-200" :
-                                                        "bg-amber-50 text-amber-700 border-amber-200"
-                                            )}>
-                                                <div className={cn(
-                                                    "w-1.5 h-1.5 rounded-full animate-pulse",
-                                                    team.status === 'Selected' ? "bg-green-500" :
-                                                        team.status === 'Rejected' ? "bg-red-500" :
-                                                            "bg-amber-500"
-                                                )} />
-                                                {team.status}
-                                            </div>
-                                        </td>
-                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
-                                            <div className="flex items-center gap-3 justify-center">
-                                                <button
-                                                    onClick={() => handleViewTeam(team)}
-                                                    className="p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all group/btn"
-                                                    title="View Team Details"
+                                            <div className="relative status-dropdown-container">
+                                                <button 
+                                                    onClick={() => setOpenStatusDropdown(openStatusDropdown === team.id ? null : team.id)}
+                                                    className={cn(
+                                                        "inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 font-black uppercase text-[9px] tracking-widest cursor-pointer hover:scale-105 transition-all",
+                                                        team.status === 'Selected' ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" :
+                                                            team.status === 'Rejected' ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100" :
+                                                                "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                                    )}
                                                 >
-                                                    <Eye className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full animate-pulse",
+                                                        team.status === 'Selected' ? "bg-green-500" :
+                                                            team.status === 'Rejected' ? "bg-red-500" :
+                                                                "bg-amber-500"
+                                                    )} />
+                                                    {team.status}
                                                 </button>
-                                                <select
-                                                    value={team.status}
-                                                    onChange={(e) => handleStatusUpdate(team.id, e.target.value)}
-                                                    className="text-[10px] font-black uppercase px-3 py-2 border-2 border-oxford/10 rounded-lg focus:border-oxford outline-none bg-white hover:border-oxford/30 transition-all cursor-pointer min-w-[100px]"
-                                                >
-                                                    <option value="Pending">Pending</option>
-                                                    <option value="Selected">Selected</option>
-                                                    <option value="Rejected">Rejected</option>
-                                                </select>
+                                                
+                                                {openStatusDropdown === team.id && (
+                                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white border-2 border-oxford/10 rounded-xl shadow-lg z-50 min-w-30">
+                                                        {['Pending', 'Selected', 'Rejected'].map((status) => (
+                                                            <button
+                                                                key={status}
+                                                                onClick={() => {
+                                                                    handleStatusUpdate(team.id, status);
+                                                                    setOpenStatusDropdown(null);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest hover:bg-oxford/5 first:rounded-t-lg last:rounded-b-lg transition-all",
+                                                                    team.status === status ? "bg-oxford/10 text-oxford" : "text-oxford/70 hover:text-oxford"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={cn(
+                                                                        "w-2 h-2 rounded-full",
+                                                                        status === 'Selected' ? "bg-green-500" :
+                                                                            status === 'Rejected' ? "bg-red-500" :
+                                                                                "bg-amber-500"
+                                                                    )} />
+                                                                    {status}
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan="5" className="p-12 text-center text-oxford/40">
+                                        <td colSpan="4" className="p-12 text-center text-oxford/40">
                                             <div className="space-y-2">
                                                 <Users className="w-8 h-8 mx-auto opacity-30" />
                                                 <p className="font-black uppercase tracking-widest">No teams found</p>
@@ -813,7 +942,7 @@ export default function FacultyDashboard() {
                         exporting && "opacity-50 cursor-not-allowed"
                     )}
                 >
-                    {exporting ? 'Exporting...' : 'Export Team Data (CSV)'}
+                    {exporting ? 'Exporting...' : 'Export Team Data (PDF)'}
                 </button>
             </div>
 
@@ -1174,7 +1303,7 @@ export default function FacultyDashboard() {
             {/* Notification Toast */}
             {notification && (
                 <div className={cn(
-                    "fixed bottom-6 right-6 z-[100] p-4 rounded-xl shadow-2xl border-2 animate-in slide-in-from-bottom-4 fade-in duration-300",
+                    "fixed bottom-6 right-6 z-100 p-4 rounded-xl shadow-2xl border-2 animate-in slide-in-from-bottom-4 fade-in duration-300",
                     notification.type === 'success' ? "bg-green-50 border-green-200 text-green-800" :
                     notification.type === 'error' ? "bg-red-50 border-red-200 text-red-800" :
                     "bg-yellow-50 border-yellow-200 text-yellow-800"
