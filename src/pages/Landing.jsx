@@ -54,10 +54,18 @@ export default function Landing() {
     return (
         <div className="flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             <div className="space-y-4 max-w-5xl">
-                <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85] mb-4">
-                    Stella Mary's <br />
-                    <span className="text-oxford/50 font-black">College of Engineering</span>
-                </h1>
+                <div className="space-y-2">
+                    <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85]">
+                        Stella Mary's College of Engineering
+                    </h1>
+                    <p className="text-sm sm:text-lg text-oxford/70 font-medium">
+                        Affiliated To Anna University, Accredited by NAAC and NBA (Mech & CSE)
+                    </p>
+                    <p className="text-sm sm:text-lg text-oxford/70 font-thin">
+                        (AN AUTONOMOUS INSTITUTION)
+                    </p>
+                    
+                </div>
                 <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/70 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
                     Inter-College Hackathon 2026. <br className="hidden sm:block" />
                     Innovate, Collaborate, and Build the Future using Zero-Cost Technologies.
