@@ -99,12 +99,15 @@ export default function Layout() {
                 const { data, error } = await supabase
                     .from('notifications')
                     .select('*')
-                    .eq('recipient_id', user.id.toString())  // Convert to string
+                    .eq('recipient_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(10); // Only fetch recent notifications for header count
 
                 if (error) {
                     console.error('Layout: Error fetching notifications:', error);
+                    // Don't return early - set count to 0 but don't break the UI
+                    setNotifications([]);
+                    setUnreadCount(0);
                     return;
                 }
 
@@ -113,9 +116,12 @@ export default function Layout() {
                 
                 // Count unread notifications
                 const unread = (data || []).filter(n => !n.is_read).length;
+                console.log('Layout: Unread count:', unread);
                 setUnreadCount(unread);
             } catch (error) {
                 console.error('Layout: Error in fetchNotifications:', error);
+                setNotifications([]);
+                setUnreadCount(0);
             }
         };
 
@@ -278,8 +284,14 @@ export default function Layout() {
                     )}
 
                     {/* Mobile Menu Toggle - Always Available Everywhere */}
-                    <button className="lg:hidden p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-50 text-oxford active:scale-95 transition-all border border-gray-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                    <button className="lg:hidden relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-50 text-oxford active:scale-95 transition-all border border-gray-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                         {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
+                        {/* Notification Badge - Show on mobile menu button */}
+                        {isLoggedIn && unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
                     </button>
                 </div>
             </header>

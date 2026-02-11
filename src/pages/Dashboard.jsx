@@ -517,20 +517,20 @@ export default function Dashboard() {
 
                     return (
                         <div key={statement.id} className={cn(
-                            "bg-white rounded-2xl border-3 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden",
+                            "bg-white rounded-xl sm:rounded-2xl border-2 sm:border-3 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden",
                             isSelected 
                                 ? "border-emerald-500 bg-gradient-to-r from-emerald-50 to-white" 
                                 : "border-gray-200 hover:border-oxford/30"
                         )}>
                             {/* Card Content */}
-                            <div className="p-6">
-                                <div className="flex items-center justify-between">
+                            <div className="p-3 sm:p-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                                     
                                     {/* Left Section */}
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="flex items-center gap-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1 w-full">
+                                        <div className="flex items-center gap-2 sm:gap-3">
                                             <span className={cn(
-                                                "px-3 py-1.5 text-sm font-black rounded-lg uppercase tracking-wider",
+                                                "px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-black rounded-lg uppercase tracking-wider",
                                                 isSelected 
                                                     ? "bg-emerald-500 text-white" 
                                                     : isFull 
@@ -541,14 +541,14 @@ export default function Dashboard() {
                                             </span>
                                             
                                             {isSelected && (
-                                                <div className="p-1 bg-emerald-100 rounded-full">
-                                                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                <div className="p-0.5 sm:p-1 bg-emerald-100 rounded-full">
+                                                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600" />
                                                 </div>
                                             )}
                                         </div>
                                         
                                         <h3 className={cn(
-                                            "text-lg sm:text-xl font-bold flex-1 line-clamp-1",
+                                            "text-sm sm:text-lg lg:text-xl font-bold flex-1 line-clamp-2 sm:line-clamp-1",
                                             isSelected ? "text-emerald-700" : "text-oxford"
                                         )}>
                                             {statement.title}
@@ -556,24 +556,25 @@ export default function Dashboard() {
                                     </div>
                                     
                                     {/* Right Section */}
-                                    <div className="flex items-center gap-6">
-                                        <div className="flex items-center gap-2 text-oxford/70">
-                                            <Users className="w-5 h-5" />
-                                            <span className="font-bold text-sm">
+                                    <div className="flex items-center gap-2 sm:gap-6 w-full sm:w-auto">
+                                        <div className="flex items-center gap-1 sm:gap-2 text-oxford/70">
+                                            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            <span className="font-bold text-xs sm:text-sm">
                                                 {statement.teams}/{statement.max_teams}
                                             </span>
                                         </div>
                                         
                                         {/* Action Button */}
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none">
                                             {!isFull || isSelected ? (
                                                 hasSubmittedIdea && isSelected ? (
                                                     <button
                                                         onClick={() => setHasSelected(true)}
-                                                        className="px-6 py-2.5 bg-emerald-500 text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-emerald-600 transition-all shadow-md flex items-center gap-2"
+                                                        className="flex-1 sm:flex-none px-3 py-2 sm:px-6 sm:py-2.5 bg-emerald-500 text-white font-bold text-[10px] sm:text-sm uppercase tracking-wider rounded-lg sm:rounded-xl hover:bg-emerald-600 transition-all shadow-md flex items-center justify-center gap-1 sm:gap-2"
                                                     >
-                                                        View Submission
-                                                        <ChevronRight className="w-4 h-4" />
+                                                        <span className="hidden sm:inline">View Submission</span>
+                                                        <span className="sm:hidden">View</span>
+                                                        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                                                     </button>
                                                 ) : (
                                                     <button
@@ -586,26 +587,26 @@ export default function Dashboard() {
                                                             }
                                                         }}
                                                         className={cn(
-                                                            "px-6 py-2.5 font-bold text-sm uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2",
+                                                            "flex-1 sm:flex-none px-3 py-2 sm:px-6 sm:py-2.5 font-bold text-[10px] sm:text-sm uppercase tracking-wider rounded-lg sm:rounded-xl transition-all shadow-md flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap",
                                                             isSelected
                                                                 ? "bg-emerald-500 text-white hover:bg-emerald-600"
                                                                 : "bg-oxford text-white hover:bg-oxford-dark"
                                                         )}
                                                     >
                                                         {isSelected ? "Submit Idea" : selectedStatement ? "Switch Track" : "Select Track"}
-                                                        <ChevronRight className="w-4 h-4" />
+                                                        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                                                     </button>
                                                 )
                                             ) : (
-                                                <div className="px-6 py-2.5 bg-gray-100 text-gray-500 font-bold text-sm uppercase tracking-wider rounded-xl flex items-center gap-2">
-                                                    <Lock className="w-4 h-4" />
+                                                <div className="flex-1 sm:flex-none px-3 py-2 sm:px-6 sm:py-2.5 bg-gray-100 text-gray-500 font-bold text-[10px] sm:text-sm uppercase tracking-wider rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2">
+                                                    <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
                                                     Full
                                                 </div>
                                             )}
                                             
                                             <button
                                                 onClick={() => setExpandedRow(isExpanded ? null : statement.id)}
-                                                className="p-2 text-oxford/70 hover:text-oxford hover:bg-oxford/5 rounded-lg transition-all"
+                                                className="p-1.5 sm:p-2 text-oxford/70 hover:text-oxford hover:bg-oxford/5 rounded-lg transition-all"
                                             >
                                                 {isExpanded ? (
                                                     <ChevronDown className="w-5 h-5" />

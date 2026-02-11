@@ -204,31 +204,27 @@ export default function Landing() {
             </div>
 
             {/* Rules Section */}
-            <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-5xl px-4 text-left space-y-6 sm:space-y-8">
-                <div className="space-y-2 sm:space-y-4">
-                    <h2 className="text-1xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Registration Rules</h2>
-                    <div className="w-12 sm:w-40 h-0 sm:h-1 bg-oxford" />
+            <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-5xl px-4 space-y-6 sm:space-y-8">
+                <div className="space-y-2 sm:space-y-4 text-center sm:text-left">
+                    <h2 className="text-2xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Registration Rules</h2>
+                    <div className="w-20 sm:w-40 h-1 bg-oxford mx-auto sm:mx-0" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-12">
-                    <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
-                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Min 2, Max 5 members per team.</p>
-                        </div>
-                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
-                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Complete before the locking period.</p>
-                        </div>
+                <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+                    <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
+                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Team Composition</h4>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Min 2, Max 5 members per team.</p>
                     </div>
-                    <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
-                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Work on only one problem at a time.</p>
-                        </div>
-                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
-                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Original code only. No plagiarism.</p>
-                        </div>
+                    <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
+                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Registration</h4>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Complete before the locking period.</p>
+                    </div>
+                    <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
+                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">One Problem</h4>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Work on only one problem at a time.</p>
+                    </div>
+                    <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
+                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Authenticity</h4>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Original code only. No plagiarism.</p>
                     </div>
                 </div>
             </section>
