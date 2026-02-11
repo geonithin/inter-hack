@@ -178,19 +178,142 @@ export default function FacultyDashboard() {
     const handleAddStatement = async (e) => {
         e.preventDefault();
         try {
-            const { error } = await supabase
+            // Verify user has faculty role before attempting insert
+            const userRole = getUserRole();
+            if (userRole !== 'faculty' && userRole !== 'admin') {
+                showNotification('You do not have permission to add problem statements', 'error');
+                return;
+            }
+
+            // Validate input data
+            if (!newStatement.title?.trim()) {
+                showNotification('Title is required', 'error');
+                return;
+            }
+            if (newStatement.title.trim().length === 0) {
+                showNotification('Title cannot be empty', 'error');
+                return;
+            }
+            if (!newStatement.description?.trim()) {
+                showNotification('Description is required', 'error');
+                return;
+            }
+            if (newStatement.description.trim().length <= 20) {
+                showNotification('Description must be at least 21 characters long', 'error');
+                return;
+            }
+            if (!newStatement.department) {
+                showNotification('Department is required', 'error');
+                return;
+            }
+            if (!newStatement.max_teams || newStatement.max_teams < 1) {
+                showNotification('Max teams must be at least 1', 'error');
+                return;
+            }
+            if (newStatement.max_teams > 10) {
+                showNotification('Max teams cannot exceed 10', 'error');
+                return;
+            }
+
+            // Prepare data that matches problem_statements table structure
+            const statementData = {
+                title: newStatement.title.trim(),
+                description: newStatement.description.trim(),
+                department: newStatement.department,
+                max_teams: parseInt(newStatement.max_teams, 10),
+                is_active: true
+            };
+
+            console.log('Inserting problem statement:', statementData);
+            console.log('User role:', userRole);
+            console.log('User ID:', user?.id);
+
+            const { data, error } = await supabase
                 .from('problem_statements')
-                .insert([newStatement]);
+                .insert([statementData])
+                .select();
                 
-            if (error) throw error;
+            if (error) {
+                console.error('Insert error details:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                console.error('Error details:', error.details);
+                console.error('Error hint:', error.hint);
+                
+                // Handle specific error codes
+                if (error.code === '42501') {
+                    showNotification(
+                        'Permission denied. Run complete_production_setup.sql in Supabase SQL Editor to set up RLS policies.', 
+                        'error'
+                    );
+                } else if (error.code === '42P01') {
+                    showNotification(
+                        'Table does not exist. Run complete_production_setup.sql to create required tables.', 
+                        'error'
+                    );
+                } else if (error.message?.includes('JWT')) {
+                    showNotification(
+                        'Authentication error. Please log out and log back in with Supabase Auth credentials.', 
+                        'error'
+                    );
+                } else if (error.message?.includes('policy')) {
+                    showNotification(
+                        'RLS policy blocking insert. Run complete_production_setup.sql to fix policies.', 
+                        'error'
+                    );
+                } else if (error.code === '23505') {
+                    showNotification(
+                        'A problem statement with this title already exists.', 
+                        'error'
+                    );
+                } else if (error.code === '23502') {
+                    showNotification(
+                        `Required field missing: ${error.message}`, 
+                        'error'
+                    );
+                } else if (error.code === '23514') {
+                    // Check constraint violation
+                    if (error.message?.includes('description')) {
+                        showNotification(
+                            'Description must be at least 21 characters long', 
+                            'error'
+                        );
+                    } else if (error.message?.includes('title')) {
+                        showNotification(
+                            'Title cannot be empty', 
+                            'error'
+                        );
+                    } else if (error.message?.includes('max_teams')) {
+                        showNotification(
+                            'Max teams must be between 1 and 10', 
+                            'error'
+                        );
+                    } else {
+                        showNotification(
+                            `Validation error: ${error.message}`, 
+                            'error'
+                        );
+                    }
+                } else {
+                    showNotification(
+                        `Database error: ${error.message || 'Unknown error'}. Check console for details.`, 
+                        'error'
+                    );
+                }
+                return;
+            }
             
+            console.log('Problem statement added successfully:', data);
             showNotification('Problem statement added successfully!', 'success');
             await fetchData();
             setIsStatementModalOpen(false);
             setNewStatement({ title: '', description: '', department: 'CS', max_teams: 3 });
         } catch (error) {
             console.error('Error adding statement:', error);
-            showNotification('Failed to add problem statement', 'error');
+            showNotification(
+                'Failed to add problem statement: ' + (error.message || 'Unknown error') + '. Check console for details.', 
+                'error'
+            );
         }
     };
     
@@ -1163,44 +1286,64 @@ export default function FacultyDashboard() {
 
             {/* Add Problem Statement Modal */}
             {isStatementModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl border-4 border-oxford animate-in zoom-in-95 duration-300">
-                        <div className="bg-oxford p-6 text-white flex items-center justify-between">
-                            <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tighter">Add Problem Statement</h3>
-                            <button onClick={() => setIsStatementModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
-                                <X className="w-6 h-6" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-2 sm:border-4 border-oxford animate-in zoom-in-95 duration-300">
+                        <div className="bg-oxford p-4 sm:p-6 text-white flex items-center justify-between sticky top-0 z-10">
+                            <h3 className="text-base sm:text-xl md:text-2xl font-black uppercase tracking-tighter">Add Problem Statement</h3>
+                            <button 
+                                onClick={() => setIsStatementModalOpen(false)} 
+                                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl transition-all flex-shrink-0"
+                                aria-label="Close modal"
+                            >
+                                <X className="w-5 h-5 sm:w-6 sm:h-6" />
                             </button>
                         </div>
-                        <form onSubmit={handleAddStatement} className="p-6 sm:p-8 space-y-6">
+                        <form onSubmit={handleAddStatement} className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Title</label>
+                                <label className="text-[9px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Title</label>
                                 <input
                                     required
                                     value={newStatement.title}
                                     onChange={(e) => setNewStatement({ ...newStatement, title: e.target.value })}
-                                    className="w-full p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none font-black text-sm uppercase"
+                                    className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-black text-xs sm:text-sm uppercase"
                                     placeholder="Enter problem statement title"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Description</label>
+                                <div className="flex items-center justify-between pl-1">
+                                    <label className="text-[9px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-widest">Description</label>
+                                    <span className={cn(
+                                        "text-[9px] sm:text-[10px] font-bold",
+                                        newStatement.description.trim().length < 21 ? "text-red-500" : "text-emerald-500"
+                                    )}>
+                                        {newStatement.description.trim().length}/21+ chars
+                                    </span>
+                                </div>
                                 <textarea
                                     required
                                     rows="4"
                                     value={newStatement.description}
                                     onChange={(e) => setNewStatement({ ...newStatement, description: e.target.value })}
-                                    className="w-full p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none font-bold text-sm resize-none"
-                                    placeholder="Enter detailed description of the problem statement"
+                                    className={cn(
+                                        "w-full p-2.5 sm:p-3.5 border-2 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-bold text-xs sm:text-sm resize-none",
+                                        newStatement.description.trim().length < 21 ? "border-red-300" : "border-oxford/10"
+                                    )}
+                                    placeholder="Enter detailed description (minimum 21 characters required)"
                                 />
+                                {newStatement.description.trim().length > 0 && newStatement.description.trim().length < 21 && (
+                                    <p className="text-[9px] sm:text-[10px] text-red-500 font-bold pl-1">
+                                        ⚠️ Need {21 - newStatement.description.trim().length} more character{21 - newStatement.description.trim().length !== 1 ? 's' : ''}
+                                    </p>
+                                )}
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Department</label>
+                                    <label className="text-[9px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Department</label>
                                     <select
                                         required
                                         value={newStatement.department}
                                         onChange={(e) => setNewStatement({ ...newStatement, department: e.target.value })}
-                                        className="w-full p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none font-black text-sm uppercase"
+                                        className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-black text-xs sm:text-sm uppercase"
                                     >
                                         <option value="CS">Computer Science</option>
                                         <option value="EC">Electronics & Communication</option>
@@ -1210,7 +1353,7 @@ export default function FacultyDashboard() {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Max Teams</label>
+                                    <label className="text-[9px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-widest pl-1">Max Teams (1-10)</label>
                                     <input
                                         required
                                         type="number"
@@ -1218,15 +1361,30 @@ export default function FacultyDashboard() {
                                         max="10"
                                         value={newStatement.max_teams}
                                         onChange={(e) => setNewStatement({ ...newStatement, max_teams: parseInt(e.target.value) })}
-                                        className="w-full p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none font-black text-sm uppercase"
+                                        className={cn(
+                                            "w-full p-2.5 sm:p-3.5 border-2 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-black text-xs sm:text-sm uppercase",
+                                            (newStatement.max_teams < 1 || newStatement.max_teams > 10) ? "border-red-300" : "border-oxford/10"
+                                        )}
                                     />
+                                    {(newStatement.max_teams < 1 || newStatement.max_teams > 10) && (
+                                        <p className="text-[9px] sm:text-[10px] text-red-500 font-bold pl-1">
+                                            ⚠️ Must be between 1 and 10
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setIsStatementModalOpen(false)} className="px-6 py-3 border-2 border-oxford/10 text-oxford/60 font-black rounded-xl uppercase tracking-widest text-xs hover:text-oxford hover:border-oxford transition-all">
+                            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsStatementModalOpen(false)} 
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-oxford/10 text-oxford/60 font-black rounded-lg sm:rounded-xl uppercase tracking-widest text-[10px] sm:text-xs hover:text-oxford hover:border-oxford transition-all order-2 sm:order-1"
+                                >
                                     Cancel
                                 </button>
-                                <button type="submit" className="px-8 py-3 bg-oxford text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-oxford-dark transition-all shadow-lg active:scale-95">
+                                <button 
+                                    type="submit" 
+                                    className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-oxford text-white font-black rounded-lg sm:rounded-xl uppercase tracking-widest text-[10px] sm:text-xs hover:bg-oxford-dark transition-all shadow-lg active:scale-95 order-1 sm:order-2"
+                                >
                                     Add Statement
                                 </button>
                             </div>

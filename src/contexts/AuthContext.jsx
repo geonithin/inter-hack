@@ -233,56 +233,54 @@ export const AuthProvider = ({ children }) => {
 
   const handleFacultyLogin = async (email, password) => {
     try {
-      // Check if it's faculty ID format (FAC001) or email
-      const isFacultyId = /^FAC\d+$/.test(email.toUpperCase());
-      
-      // Optimize query - select only needed fields for faster response
-      let query = supabase.from('faculty').select('id, faculty_id, name, email, password, department').eq('is_active', true);
-      
-      if (isFacultyId) {
-        query = query.eq('faculty_id', email.toUpperCase());
-      } else {
-        query = query.eq('email', email);
-      }
-      
-      const { data: facultyData, error: facultyError } = await query.single();
-      
-      if (facultyError || !facultyData) {
-        throw new Error('Invalid faculty credentials');
-      }
-      
-      // Simple password check (in production, this should be hashed)
-      if (facultyData.password !== password) {
-        throw new Error('Invalid faculty credentials');
+      // PRODUCTION: Use Supabase Auth for all faculty
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        throw authError;
       }
 
-      // Create a mock user object for faculty
-      const mockFacultyUser = {
-        id: facultyData.id,
-        email: facultyData.email,
-        user_metadata: {
-          full_name: facultyData.name,
-          role: 'faculty'
-        }
-      };
+      if (!authData?.user) {
+        throw new Error('Authentication failed');
+      }
 
-      const mockFacultyProfile = {
-        id: facultyData.id,
-        email: facultyData.email,
-        full_name: facultyData.name,
-        role: 'faculty'
-      };
+      // Verify user is faculty by checking their profile role
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
 
-      // Set faculty auth state immediately
-      setUser(mockFacultyUser);
-      setProfile(mockFacultyProfile);
-      setLoading(false); // Stop loading immediately
+      if (profileError) {
+        console.error('Profile check error:', profileError);
+        // Don't fail login if profile check fails, auth state will handle it
+      }
 
-      // Store faculty data for later use
-      localStorage.setItem('facultyData', JSON.stringify(facultyData));
+      if (profileData && profileData.role !== 'faculty') {
+        await supabase.auth.signOut();
+        throw new Error('Not authorized as faculty member. Please use the student/team lead login.');
+      }
 
-      return { data: { user: mockFacultyUser }, error: null };
+      // Fetch faculty data for additional info
+      const { data: facultyData } = await supabase
+        .from('faculty')
+        .select('id, faculty_id, name, email, department')
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
+
+      // Store faculty info if available
+      if (facultyData) {
+        localStorage.setItem('facultyData', JSON.stringify(facultyData));
+      }
+
+      // Auth state change handler will set user and profile automatically
+      return { data: authData, error: null };
     } catch (error) {
+      console.error('Faculty login error:', error);
       return { data: null, error };
     }
   };

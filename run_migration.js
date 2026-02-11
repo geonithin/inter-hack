@@ -14,7 +14,7 @@ try {
       persistSession: false
     }
   });
-} catch (error) {
+} catch {
   console.log('⚠️  Supabase client initialization skipped (this is fine)');
 }
 
@@ -25,7 +25,7 @@ async function runMigration() {
     let sqlContent;
     try {
       sqlContent = readFileSync('complete_database_optimization.sql', 'utf8');
-    } catch (fileError) {
+    } catch {
       console.error('❌ Could not find complete_database_optimization.sql');
       console.error('💡 Make sure the file exists in the current directory');
       return false;
@@ -99,7 +99,7 @@ async function testConnection() {
     console.log('🔗 Testing database connection...');
     
     // Use a simple query that should work on any Supabase database
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('profiles')
       .select('id')
       .limit(1);
@@ -111,7 +111,7 @@ async function testConnection() {
       console.log('✅ Database connection successful!');
       return true;
     }
-  } catch (err) {
+  } catch {
     // Network errors, fetch failures, etc.
     console.log('⚠️  Database connection test failed (this is okay)');
     console.log('💡 The migration can still be run manually in Supabase Dashboard');

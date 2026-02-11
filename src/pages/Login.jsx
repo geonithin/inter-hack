@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { User, ShieldCheck } from 'lucide-react';
 import { cn, getSupabaseErrorMessage } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
-    const navigate = useNavigate();
     const { signIn } = useAuth();
     const [role, setRole] = useState('lead'); // This is just for the UI toggle initial state
     const [email, setEmail] = useState('');
@@ -17,7 +15,7 @@ export default function Login() {
         setIsLoading(true);
 
         try {
-            const { data, error } = await signIn(email, password, role);
+            const { error } = await signIn(email, password, role);
 
             if (error) throw error;
 

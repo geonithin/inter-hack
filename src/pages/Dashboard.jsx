@@ -63,7 +63,9 @@ export default function Dashboard() {
                     // Count teams per statement
                     const countMap = {};
                     teamCounts?.forEach(team => {
-                        countMap[team.selected_statement_id] = (countMap[team.selected_statement_id] || 0) + 1;
+                        if (team && team.selected_statement_id) {
+                            countMap[team.selected_statement_id] = (countMap[team.selected_statement_id] || 0) + 1;
+                        }
                     });
 
                     // Add team count for each statement (much faster)
@@ -104,29 +106,31 @@ export default function Dashboard() {
                         }
                     } else {
                         setTeam(teamData);
-                        if (teamData.selected_statement_id) {
+                        if (teamData?.selected_statement_id) {
                             // Find the selected statement from fetched data
                             const statement = statementsWithCounts?.find(s => s.id === teamData.selected_statement_id);
                             setSelectedStatement(statement);
                         }
                         
                         // Check if team has already submitted their idea
-                        const { data: submissions, error: submissionError } = await supabase
-                            .from('submissions')
-                            .select('*')
-                            .eq('team_id', teamData.id)
-                            .limit(1);
+                        if (teamData?.id) {
+                            const { data: submissions, error: submissionError } = await supabase
+                                .from('submissions')
+                                .select('*')
+                                .eq('team_id', teamData.id)
+                                .limit(1);
                             
-                        if (submissionError) {
-                            console.warn('Error fetching submissions:', submissionError);
-                            if (submissionError.message?.includes('relation "submissions" does not exist')) {
-                                console.error('⚠️ Submissions table missing. Please run the migration in Supabase SQL editor.');
-                                showNotification('Database setup required: run submissions migration', 'warning');
+                            if (submissionError) {
+                                console.warn('Error fetching submissions:', submissionError);
+                                if (submissionError.message?.includes('relation "submissions" does not exist')) {
+                                    console.error('⚠️ Submissions table missing. Please run the migration in Supabase SQL editor.');
+                                    showNotification('Database setup required: run submissions migration', 'warning');
+                                }
+                            } else if (submissions && submissions.length > 0) {
+                                setHasSubmittedIdea(true);
+                                setSubmissionData(submissions[0]);
+                                console.log('Team has already submitted their idea:', submissions[0]);
                             }
-                        } else if (submissions && submissions.length > 0) {
-                            setHasSubmittedIdea(true);
-                            setSubmissionData(submissions[0]);
-                            console.log('Team has already submitted their idea:', submissions[0]);
                         }
                     }
                 }
@@ -216,6 +220,12 @@ export default function Dashboard() {
     };
 
     const confirmSelection = async () => {
+        if (!team?.id) {
+            showNotification('Team information not found. Please refresh the page.', 'error');
+            setIsConfirming(null);
+            return;
+        }
+
         try {
             const { error: updateError } = await supabase
                 .from('teams')
@@ -233,29 +243,31 @@ export default function Dashboard() {
             showNotification(`Problem statement "${isConfirming.title}" selected successfully!`, 'success');
             
             // Create notification record
-            try {
-                const { error: notificationError } = await supabase
-                    .from('notifications')
-                    .insert([{
-                        recipient_id: user.id,
-                        recipient_type: 'team',
-                        title: 'Problem Statement Selected!',
-                        message: `Your team "${team.name}" has successfully selected the problem statement: "${isConfirming.title}". You can now start working on your solution!`,
-                        type: 'info',
-                        is_read: false,
-                        sender_type: 'system',
-                        team_id: team.id
-                    }]);
+            if (user?.id && team?.id) {
+                try {
+                    const { error: notificationError } = await supabase
+                        .from('notifications')
+                        .insert([{
+                            recipient_id: user.id,
+                            recipient_type: 'team',
+                            title: 'Problem Statement Selected!',
+                            message: `Your team "${team.name || 'Your team'}" has successfully selected the problem statement: "${isConfirming.title}". You can now start working on your solution!`,
+                            type: 'info',
+                            is_read: false,
+                            sender_type: 'system',
+                            team_id: team.id
+                        }]);
 
-                if (notificationError) {
-                    console.error('Error creating selection notification:', notificationError);
-                } else {
-                    console.log('Selection notification created successfully');
-                    // Refresh notifications to show the new one
-                    fetchNotifications();
+                    if (notificationError) {
+                        console.error('Error creating selection notification:', notificationError);
+                    } else {
+                        console.log('Selection notification created successfully');
+                        // Refresh notifications to show the new one
+                        fetchNotifications();
+                    }
+                } catch (error) {
+                    console.error('Selection notification error:', error);
                 }
-            } catch (error) {
-                console.error('Selection notification error:', error);
             }
         } catch (error) {
             console.error('Error updating selection:', error);
