@@ -18,31 +18,27 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Reduce timeout for faster loading
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 1000)
-        );
+        console.log('Initializing auth...');
         
-        const authPromise = (async () => {
-          // Get initial session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error('Error getting session:', error);
-            return;
-          }
+        // Get initial session with longer timeout for reliability
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
 
-          if (session?.user) {
-            // Don't await - let user session load in background for faster UI
-            handleUserSession(session.user);
-          } else {
-            // No session - we can load immediately
-            setLoading(false);
-          }
-        })();
-        
-        // Race between auth check and timeout
-        await Promise.race([authPromise, timeoutPromise]);
+        if (session?.user) {
+          console.log('Session found, loading user:', session.user.id);
+          // IMPORTANT: Wait for session to be fully handled before marking initialized
+          await handleUserSession(session.user);
+        } else {
+          console.log('No session found');
+          // No session - we can load immediately
+          setLoading(false);
+        }
         
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -93,9 +89,10 @@ export const AuthProvider = ({ children }) => {
     };
   }, [initialized]);
 
-  // Fast profile creation with optimized retry
   const ensureProfileFast = async (user) => {
     try {
+      console.log('Fetching profile for user:', user.id, user.email);
+      
       // First, try to get existing profile with shorter timeout
       const profilePromise = supabase
         .from('profiles')
@@ -105,15 +102,25 @@ export const AuthProvider = ({ children }) => {
         
       // Increase timeout for more reliable profile fetch
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       );
       
       const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);
-        
-      if (profile) return profile;
+      
+      if (profile) {
+        console.log('✅ Profile found:', {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role
+        });
+        return profile;
+      }
+      
+      console.warn('Profile not found, error:', error);
       
       // If no profile found, try to create it quickly
       if (error && (error.code === 'PGRST116' || error.message.includes('timeout'))) {
+        console.log('Creating new profile...');
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -126,7 +133,7 @@ export const AuthProvider = ({ children }) => {
           .single();
           
         if (insertError) {
-          console.warn('Profile creation failed:', insertError);
+          console.error('Profile creation failed:', insertError);
           // Return basic profile as fallback
           return {
             id: user.id,
@@ -136,12 +143,13 @@ export const AuthProvider = ({ children }) => {
           };
         }
         
+        console.log('✅ New profile created:', newProfile);
         return newProfile;
       }
       
       throw error;
     } catch (error) {
-      console.warn('Profile sync failed, using fallback:', error);
+      console.error('Profile sync failed, using fallback:', error);
       // Always return a basic profile to avoid blocking login
       return {
         id: user.id,
@@ -154,45 +162,51 @@ export const AuthProvider = ({ children }) => {
 
   const handleUserSession = async (user) => {
     try {
-      // Set user immediately for faster UI response
-      setUser(user);
-      setLoading(false); // Stop loading immediately
+      console.log('Handling user session...', user.id);
       
-      // Create a basic profile from user data to avoid waiting
-      const basicProfile = {
+      // Set user immediately
+      setUser(user);
+      
+      // Fetch actual profile from database (WAIT for this)
+      const actualProfile = await ensureProfileFast(user);
+      
+      if (actualProfile) {
+        console.log('Profile loaded:', {
+          userId: actualProfile.id,
+          email: actualProfile.email,
+          role: actualProfile.role
+        });
+        setProfile(actualProfile);
+      } else {
+        // Fallback to user metadata if profile fetch fails
+        const fallbackProfile = {
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0],
+          role: user.user_metadata?.role || 'lead'
+        };
+        console.warn('Using fallback profile:', fallbackProfile);
+        setProfile(fallbackProfile);
+      }
+      
+      // Clear any old localStorage values
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userRole');
+      
+      // Stop loading after profile is set
+      setLoading(false);
+      
+    } catch (error) {
+      console.error('Error handling user session:', error);
+      setLoading(false);
+      // Don't sign out - create fallback profile
+      const fallbackProfile = {
         id: user.id,
         email: user.email,
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0],
         role: user.user_metadata?.role || 'lead'
       };
-      
-      setProfile(basicProfile);
-      
-      // Clear any old localStorage values
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('facultyData');
-      
-      console.log('User session established:', { 
-        userId: user.id, 
-        role: basicProfile.role,
-        email: user.email 
-      });
-      
-      // Fetch/ensure actual profile in background (non-blocking)
-      ensureProfileFast(user).then(actualProfile => {
-        if (actualProfile && actualProfile.role !== basicProfile.role) {
-          setProfile(actualProfile);
-        }
-      }).catch(error => {
-        console.warn('Background profile sync failed:', error);
-        // Don't throw - user is already logged in with basic profile
-      });
-      
-    } catch (error) {
-      console.error('Error handling user session:', error);
-      // If we can't get profile, sign out the user
-      await supabase.auth.signOut();
+      setProfile(fallbackProfile);
     }
   };
 
@@ -233,6 +247,8 @@ export const AuthProvider = ({ children }) => {
 
   const handleFacultyLogin = async (email, password) => {
     try {
+      console.log('🎓 Starting faculty login for:', email);
+      
       // PRODUCTION: Use Supabase Auth for all faculty
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -240,6 +256,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (authError) {
+        console.error('❌ Auth error:', authError);
         throw authError;
       }
 
@@ -247,21 +264,76 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Authentication failed');
       }
 
-      // Verify user is faculty by checking their profile role
+      console.log('✅ Auth successful, checking profile...');
+
+      // Check if user has faculty role in profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authData.user.id)
         .single();
 
-      if (profileError) {
+      console.log('Profile check result:', {
+        found: !!profileData,
+        role: profileData?.role,
+        error: profileError?.code
+      });
+
+      if (profileError && profileError.code !== 'PGRST116') {
         console.error('Profile check error:', profileError);
-        // Don't fail login if profile check fails, auth state will handle it
       }
 
-      if (profileData && profileData.role !== 'faculty') {
+      // If no profile exists, check faculty table
+      if (!profileData || !profileData.role) {
+        console.log('⚠️ No profile found, checking faculty table...');
+        
+        const { data: facultyRecord, error: facultyError } = await supabase
+          .from('faculty')
+          .select('id')
+          .eq('email', email)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        console.log('Faculty table check:', {
+          found: !!facultyRecord,
+          error: facultyError?.message
+        });
+        
+        if (facultyError) {
+          console.error('Faculty check error:', facultyError);
+        }
+        
+        if (!facultyRecord) {
+          console.error('❌ Not found in faculty table');
+          await supabase.auth.signOut();
+          throw new Error('Not authorized as faculty member. Please contact admin or use student login.');
+        }
+        
+        // Create/update profile with faculty role
+        console.log('📝 Creating faculty profile...');
+        const { data: upsertData, error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            email: email,
+            role: 'faculty',
+            full_name: authData.user.user_metadata?.full_name || email.split('@')[0],
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' })
+          .select()
+          .single();
+        
+        if (upsertError) {
+          console.error('❌ Profile creation error:', upsertError);
+        } else {
+          console.log('✅ Faculty profile created:', upsertData);
+        }
+      } else if (profileData.role !== 'faculty' && profileData.role !== 'admin') {
+        console.error('❌ User has wrong role:', profileData.role);
         await supabase.auth.signOut();
         throw new Error('Not authorized as faculty member. Please use the student/team lead login.');
+      } else {
+        console.log('✅ Faculty role verified:', profileData.role);
       }
 
       // Fetch faculty data for additional info
@@ -274,13 +346,15 @@ export const AuthProvider = ({ children }) => {
 
       // Store faculty info if available
       if (facultyData) {
+        console.log('📋 Faculty data loaded:', facultyData);
         localStorage.setItem('facultyData', JSON.stringify(facultyData));
       }
 
+      console.log('✅ Faculty login complete! Auth state will update automatically.');
       // Auth state change handler will set user and profile automatically
       return { data: authData, error: null };
     } catch (error) {
-      console.error('Faculty login error:', error);
+      console.error('❌ Faculty login error:', error.message);
       return { data: null, error };
     }
   };

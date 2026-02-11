@@ -18,7 +18,7 @@ export const ProtectedRoute = ({
   fallbackPath = '/login',
   requireAuth = true 
 }) => {
-  const { loading, initialized, isAuthenticated, canAccess } = useAuth();
+  const { loading, initialized, isAuthenticated, canAccess, getUserRole, profile } = useAuth();
   const location = useLocation();
 
   // Show loading while auth is being initialized
@@ -28,6 +28,7 @@ export const ProtectedRoute = ({
 
   // If authentication is required but user is not authenticated
   if (requireAuth && !isAuthenticated()) {
+    console.log('ProtectedRoute: User not authenticated, redirecting to login');
     return <Navigate 
       to={fallbackPath} 
       state={{ from: location.pathname }}
@@ -36,26 +37,46 @@ export const ProtectedRoute = ({
   }
 
   // If specific role is required, check permission
-  if (requiredRole && !canAccess(requiredRole)) {
-    // Redirect based on what they don't have access to
-    if (!isAuthenticated()) {
+  if (requiredRole) {
+    const userRole = getUserRole();
+    const hasAccess = canAccess(requiredRole);
+    
+    console.log('ProtectedRoute role check:', {
+      requiredRole,
+      userRole,
+      hasAccess,
+      profileLoaded: !!profile,
+      profileRole: profile?.role
+    });
+    
+    if (!hasAccess) {
+      // Redirect based on what they don't have access to
+      if (!isAuthenticated()) {
+        return <Navigate 
+          to="/login" 
+          state={{ from: location.pathname }}
+          replace 
+        />;
+      }
+      
+      // User is authenticated but doesn't have the right role
+      console.warn('Access denied:', {
+        userRole,
+        requiredRole,
+        path: location.pathname
+      });
+      
       return <Navigate 
-        to="/login" 
-        state={{ from: location.pathname }}
+        to="/unauthorized" 
+        state={{ 
+          from: location.pathname,
+          requiredRole,
+          userRole,
+          message: `Access denied. This page requires ${requiredRole} privileges. You have ${userRole || 'unknown'} role.`
+        }}
         replace 
       />;
     }
-    
-    // User is authenticated but doesn't have the right role
-    return <Navigate 
-      to="/unauthorized" 
-      state={{ 
-        from: location.pathname,
-        requiredRole,
-        message: `Access denied. This page requires ${requiredRole} privileges.`
-      }}
-      replace 
-    />;
   }
 
   return children;
@@ -142,7 +163,9 @@ export const UnauthorizedPage = () => {
   
   const message = location.state?.message || 'You are not authorized to access this page.';
   const requiredRole = location.state?.requiredRole;
-  const userRole = getUserRole();
+  const stateUserRole = location.state?.userRole;
+  const currentUserRole = getUserRole();
+  const userRole = stateUserRole || currentUserRole;
 
   const handleGoToDashboard = () => {
     const role = getUserRole();
@@ -170,16 +193,19 @@ export const UnauthorizedPage = () => {
           <p className="text-gray-600">{message}</p>
         </div>
         
-        {requiredRole && userRole && (
-          <div className="bg-gray-50 rounded-lg p-4 text-sm">
+        <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
+          {requiredRole && (
             <p className="text-gray-700">
               <span className="font-semibold">Required:</span> {requiredRole} access
             </p>
-            <p className="text-gray-700">
-              <span className="font-semibold">Your role:</span> {userRole}
-            </p>
-          </div>
-        )}
+          )}
+          <p className="text-gray-700">
+            <span className="font-semibold">Your role:</span> {userRole || 'Not loaded yet'}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Check browser console (F12) for more details
+          </p>
+        </div>
 
         <div className="space-y-3">
           {isAuthenticated() ? (

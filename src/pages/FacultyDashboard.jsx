@@ -41,26 +41,17 @@ export default function FacultyDashboard() {
     });
 
     useEffect(() => {
-        // With protected routes, we can trust that user is authenticated with faculty role  
-        if (!isAuthenticated() || !user) {
-            console.warn('No valid faculty session found');
-            setError('Not authenticated as faculty. Please log in with faculty credentials.');
-            setIsLoading(false);
-            return;
+        // Protected route already verified authentication and faculty role
+        // Just fetch data if we have a user
+        if (user) {
+            console.log('Faculty dashboard loading for user:', user.id);
+            fetchData();
+        } else {
+            // If no user yet, wait for auth to initialize
+            console.log('Waiting for user authentication...');
+            setIsLoading(true);
         }
-        
-        // Verify the user has faculty role
-        const userRole = getUserRole();
-        
-        if (userRole !== 'faculty' && userRole !== 'admin') {
-            console.warn('User does not have faculty privileges, role:', userRole);
-            setError('Access denied. Faculty privileges required.');
-            setIsLoading(false);
-            return;
-        }
-        
-        fetchData();
-    }, [isAuthenticated, user, getUserRole]);
+    }, [user]);
     
     // Close dropdown when clicking outside
     useEffect(() => {

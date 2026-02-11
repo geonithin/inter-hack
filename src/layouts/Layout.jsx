@@ -197,7 +197,7 @@ export default function Layout() {
                     {!isStrictAuthPage && (
                         <div className="hidden lg:flex items-center justify-end flex-1 space-x-6">
                             <nav className="flex items-center space-x-6">
-                                <button onClick={() => navigate('/')} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Home</button>
+                                <button onClick={() => { navigate('/', { replace: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Home</button>
                                 <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">Contact</button>
                                 <button onClick={handleDashboardAccess} className="hover:text-oxford-light transition-all font-black uppercase text-xs tracking-widest border-b-2 border-transparent hover:border-oxford pb-0.5 whitespace-nowrap">
                                     Dashboard
@@ -319,10 +319,16 @@ export default function Layout() {
                         {/* Compact Navigation Items */}
                         <nav className="space-y-1 mb-4">
                             <button
-                                onClick={() => { navigate('/'); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left p-2.5 rounded-xl bg-white/70 hover:bg-white text-gray-800 transition-all duration-200 flex items-center gap-3 group"
+                                onClick={() => { navigate('/', { replace: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); setIsMobileMenuOpen(false); }}
+                                className={`w-full text-left p-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group shadow-sm ${
+                                    location.pathname === '/' 
+                                        ? 'bg-oxford text-white hover:bg-oxford/90' 
+                                        : 'bg-white/70 hover:bg-white text-gray-800'
+                                }`}
                             >
-                                <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                                <div className={`p-1.5 rounded-lg group-hover:bg-gray-200 transition-colors ${
+                                    location.pathname === '/' ? 'bg-white/20 group-hover:bg-white/30' : 'bg-gray-100'
+                                }`}>
                                     <Home className="w-4 h-4" />
                                 </div>
                                 <p className="font-medium text-sm">Home</p>
@@ -340,7 +346,26 @@ export default function Layout() {
 
                             {/* Dynamic Menu Items based on Auth State */}
                             {isLoggedIn ? (
-                                <>
+<>
+                                    {/* Dashboard Button */}
+                                    <button
+                                        onClick={() => { handleDashboardAccess(); setIsMobileMenuOpen(false); }}
+                                        className={`w-full text-left p-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group shadow-sm ${
+                                            location.pathname === '/dashboard' || location.pathname === '/faculty'
+                                                ? 'bg-oxford text-white hover:bg-oxford/90' 
+                                                : 'bg-white/70 hover:bg-white text-gray-800'
+                                        }`}
+                                    >
+                                        <div className={`p-1.5 rounded-lg group-hover:bg-gray-200 transition-colors ${
+                                            location.pathname === '/dashboard' || location.pathname === '/faculty'
+                                                ? 'bg-white/20 group-hover:bg-white/30' 
+                                                : 'bg-gray-100'
+                                        }`}>
+                                            <FileText className="w-4 h-4" />
+                                        </div>
+                                        <p className="font-medium text-sm">Dashboard</p>
+                                    </button>
+                                    
                                     {/* Notifications - For all users */}
                                     {
                                         <button
@@ -365,7 +390,7 @@ export default function Layout() {
                                             )}
                                         </button>
                                     }
-                                </>
+                                </>,
                             ) : (
                                 <>
                                     <div className="border-t border-gray-200 pt-2 mt-2">
@@ -412,7 +437,7 @@ export default function Layout() {
                                 
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-medium text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all duration-200"
+                                    className="w-full py-2.5 bg-oxford hover:bg-oxford/90 text-white rounded-xl font-medium text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all duration-200"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Sign Out

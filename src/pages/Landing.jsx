@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { Mail, Instagram, Linkedin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Instagram, Linkedin, Send, CheckCircle, Phone, MapPin } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Landing() {
     const navigate = useNavigate();
+    const { isAuthenticated, getUserRole } = useAuth();
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState(null);
@@ -162,7 +164,7 @@ export default function Landing() {
                     </p>
                     
                 </div>
-                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
+                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed mt-12 sm:mt-16">
                     INTRA HACKATHON 2026 <br className="hidden sm:block" />
                 </p>
                 <p className="text-sm sm:text-lg lg:text-xl text-oxford/70 max-w-4xl mx-auto font-semibold -mt-5 tracking-tight leading-relaxed">
@@ -170,20 +172,23 @@ export default function Landing() {
                 </p>
             </div>
 
-            <div className="relative z-10 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md px-4 mt-8 sm:mt-12">
-                <button
-                    onClick={() => navigate('/register')}
-                    className="flex-1 bg-oxford text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md hover:bg-opacity-90 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
-                >
-                    Register Team
-                </button>
-                <button
-                    onClick={() => navigate('/login')}
-                    className="flex-1 bg-white text-oxford font-semibold py-3 px-6 rounded-lg border border-oxford/20 transition-all duration-200 shadow-sm hover:shadow-md hover:border-oxford/40 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
-                >
-                    Dashboard
-                </button>
-            </div>
+            {/* Only show these buttons when user is NOT logged in */}
+            {!isAuthenticated() && (
+                <div className="relative z-10 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md px-4 mt-8 sm:mt-12">
+                    <button
+                        onClick={() => navigate('/register')}
+                        className="flex-1 bg-oxford text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md hover:bg-opacity-90 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
+                    >
+                        Register Team
+                    </button>
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="flex-1 bg-white text-oxford font-semibold py-3 px-6 rounded-lg border border-oxford/20 transition-all duration-200 shadow-sm hover:shadow-md hover:border-oxford/40 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
+                    >
+                        Dashboard
+                    </button>
+                </div>
+            )}
 
             <div className="relative z-10 pt-8 sm:pt-12 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-7xl px-4">
                 {[
@@ -199,30 +204,30 @@ export default function Landing() {
             </div>
 
             {/* Rules Section */}
-            <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
+            <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-5xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
-                    <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter">Registration Rules</h2>
-                    <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford" />
+                    <h2 className="text-1xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Registration Rules</h2>
+                    <div className="w-12 sm:w-40 h-0 sm:h-1 bg-oxford" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-12">
                     <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Min 2, Max 5 members per team.</p>
+                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
+                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Team Composition</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Min 2, Max 5 members per team.</p>
                         </div>
-                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Complete before the locking period.</p>
+                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
+                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Registration</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Complete before the locking period.</p>
                         </div>
                     </div>
                     <div className="space-y-4 sm:space-y-6">
-                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Work on only one problem at a time.</p>
+                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
+                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">One Problem</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Work on only one problem at a time.</p>
                         </div>
-                        <div className="p-4 sm:p-8 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                            <h4 className="font-black text-xl sm:text-3xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
-                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold">Original code only. No plagiarism.</p>
+                        <div className="p-4 sm:p-8 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-block transition-shadow duration-200">
+                            <h4 className="font-black text-xl sm:text-1xl uppercase tracking-tight mb-1 sm:mb-2">Authenticity</h4>
+                            <p className="text-[10px] sm:text-base text-oxford/80 font-bold whitespace-nowrap">Original code only. No plagiarism.</p>
                         </div>
                     </div>
                 </div>
@@ -231,8 +236,8 @@ export default function Landing() {
             {/* Guidelines Section */}
             <section id="guidelines" className="relative z-10 pt-8 sm:pt-16 pb-6 sm:pb-10 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
-                    <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter text-right">Guidelines</h2>
-                    <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford ml-auto" />
+                    <h2 className="text-2xl lg:text-4xl font-black text-oxford uppercase tracking-tighter text-right">Guidelines</h2>
+                    <div className="w-12 sm:w-30 h-1 sm:h-1 bg-oxford ml-auto" />
                 </div>
                 <div className="bg-oxford text-white p-6 sm:p-12 rounded-2xl sm:rounded-3xl shadow-2xl space-y-6 sm:space-y-10 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -259,38 +264,48 @@ export default function Landing() {
             {/* Contact Section */}
             <section id="contact" className="relative z-10 pt-8 sm:pt-16 pb-8 sm:pb-12 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
-                    <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter">Contact Us</h2>
-                    <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford" />
+                    <h2 className="text-2xl lg:text-4xl font-black text-oxford uppercase tracking-tighter">Contact Us</h2>
+                    <div className="w-12 sm:w-30 h-1 sm:h-1 bg-oxford" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12">
                     <div className="space-y-6 sm:space-y-8">
                         <div className="space-y-2">
-                            <h3 className="text-xl sm:text-3xl font-black text-oxford uppercase tracking-tight">Get in Touch</h3>
+                            <h3 className="text-xl sm:text-2xl font-black text-oxford uppercase tracking-tight">Get in Touch</h3>
                             <p className="text-sm sm:text-base text-oxford/80 font-bold leading-relaxed">
                                 Have questions about the hackathon? Reach out to us and we'll get back to you as soon as possible.
                             </p>
                         </div>
                         <div className="space-y-4">
-                            <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl flex items-center gap-4">
+                            <div className="p-4 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-flex items-center gap-4 transition-shadow duration-200">
                                 <div className="p-3 bg-oxford rounded-xl">
                                     <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Email</h4>
-                                    <a href="mailto:intrahackathon2026@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all">intrahackathon2026@smce.edu.in</a>
+                                    <a href="mailto:intrahackathon2026@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">intrahackathon2026@smce.edu.in</a>
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Phone</h4>
-                                <a href="tel:+918608582295" className="text-base sm:text-xl font-black text-oxford hover:text-oxford-light transition-all">+91 86085 82295</a>
+                            
+                            <div className="p-4 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-flex items-center gap-4 transition-shadow duration-200">
+                                <div className="p-3 bg-oxford rounded-xl">
+                                    <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Phone</h4>
+                                    <a href="tel:+918608582295" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">+91 86085 82295</a>
+                                </div>
                             </div>
-                            <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
-                                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Location</h4>
-                                <p className="text-sm sm:text-base font-black text-oxford leading-relaxed">
-                                    Stella Mary's College of Engineering<br />
-                                    Kanyakumari District, Tamil Nadu<br />
-                                    629002
-                                </p>
+                            <div className="p-4 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-flex items-start gap-4 transition-shadow duration-200">
+                                <div className="p-3 bg-oxford rounded-xl">
+                                    <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Location</h4>
+                                    <a href="https://www.google.com/maps/place/Stella+Mary's+College+Of+Engineering/@8.1336344,77.3404294,17z/data=!3m1!4b1!4m6!3m5!1s0x3b04fae7b453d579:0xf4356d0b26d3dd2a!8m2!3d8.1336344!4d77.3430043!16s%2Fg%2F11b7qq7hst?entry=ttu&g_ep=EgoyMDI2MDIwOC4wIKXMDSoASAFQAw%3D%3D" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">Stella Mary's College of Engineering<br />
+                                        Kanyakumari District, Tamil Nadu<br />
+                                        629002</a>
+                                
+                                </div>
                             </div>
                         </div>
 
