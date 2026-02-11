@@ -276,20 +276,21 @@ export default function Register() {
                                         <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Department</label>
                                         <select required value={teamData.department} onChange={(e) => setTeamData({ ...teamData, department: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base">
                                             <option value="">Select Department</option>
-                                            <option>Computer Science</option>
-                                            <option>Electronics</option>
-                                            <option>Mechanical</option>
-                                            <option>Civil</option>
+                                            <option value="CSE">Computer Science</option>
+                                            <option value="ECE">Electronics</option>
+                                            <option value="MECH">Mechanical</option>
+                                            <option value="CIVIL">Civil</option>
+                                            <option value="EEE">Electrical</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Year</label>
                                         <select required value={teamData.year} onChange={(e) => setTeamData({ ...teamData, year: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base">
                                             <option value="">Select Year</option>
-                                            <option>1st Year</option>
-                                            <option>2nd Year</option>
-                                            <option>3rd Year</option>
-                                            <option>4th Year</option>
+                                            <option value="1">1st Year</option>
+                                            <option value="2">2nd Year</option>
+                                            <option value="3">3rd Year</option>
+                                            <option value="4">4th Year</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">

@@ -59,13 +59,22 @@ export default function Layout() {
             if (isAuthenticated() && getUserRole() === 'lead' && user) {
                 try {
                     const { supabase } = await import('../lib/supabase');
+                    
+                    // Add slight delay to ensure auth context is fully loaded
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     const { data: team, error } = await supabase
                         .from('teams')
                         .select('name')
                         .eq('lead_id', user.id)
-                        .single();
+                        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
                         
-                    if (team && !error) {
+                    if (error) {
+                        console.error('Error fetching team:', error);
+                        return;
+                    }
+                    
+                    if (team) {
                         setTeamName(team.name);
                     } else {
                         setTeamName('Team Lead'); // Fallback if no team found
@@ -178,7 +187,7 @@ export default function Layout() {
                                 <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-8 sm:h-8 object-contain" />
                             </div>
                             <div className="space-y-0.5">
-                                <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">SMCE HACKATHON</h1>
+                                <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">INTRA HACKATHON 2026</h1>
                                 <p className="text-[6px] sm:text-[8px] font-black uppercase opacity-40 tracking-[0.2em]">Stella Mary's College of Engineering</p>
                             </div>
                         </div>

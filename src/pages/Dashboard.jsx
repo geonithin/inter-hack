@@ -45,7 +45,7 @@ export default function Dashboard() {
                         .from('teams')
                         .select('*')
                         .eq('lead_id', user.id)
-                        .single()
+                        .maybeSingle() // Use maybeSingle to handle no results gracefully
                 ]);
 
                 const { data: statementsData, error: statementsError } = statementsResponse;
@@ -265,9 +265,9 @@ export default function Dashboard() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in duration-200">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 sm:border-8 border-oxford border-t-transparent rounded-full animate-spin" />
-                <p className="text-oxford font-black uppercase tracking-[0.2em] text-xs sm:text-sm">Loading Project tracks...</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3 animate-in fade-in duration-200">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 border-2 sm:border-3 border-oxford border-t-transparent rounded-full animate-spin" />
+                <p className="text-oxford font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">Loading Project tracks...</p>
             </div>
         );
     }
@@ -276,56 +276,56 @@ export default function Dashboard() {
         return (
             <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
                 {/* Back Button */}
-                <div className="flex justify-start mb-6">
+                <div className="flex justify-start mb-4">
                     <button
                         onClick={() => { setHasSelected(false); }}
-                        className="text-[10px] sm:text-sm font-black text-oxford uppercase border-2 border-oxford px-4 py-2 rounded-xl hover:bg-oxford hover:text-white transition-all shadow-lg active:scale-95 tracking-widest bg-white"
+                        className="text-[10px] sm:text-xs font-black text-oxford uppercase border border-oxford px-3 py-1.5 rounded-lg hover:bg-oxford hover:text-white transition-all shadow-sm active:scale-95 tracking-widest bg-white"
                     >
                         ← Back to Problem Statements
                     </button>
                 </div>
 
                 {/* Enhanced Problem Statement View */}
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border-2 border-oxford/15 shadow-xl hover:shadow-2xl transition-all p-8">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-oxford/15 shadow-lg transition-all p-6">
                     {/* Header */}
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <span className="px-4 py-2 bg-oxford text-white text-sm font-black rounded-xl uppercase tracking-widest shadow-md">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <span className="px-3 py-1 bg-oxford text-white text-xs font-black rounded-lg uppercase tracking-widest shadow-sm">
                                     {selectedStatement.dept}
                                 </span>
-                                <div className="flex items-center gap-2 text-oxford/60 bg-oxford/5 px-3 py-2 rounded-xl">
-                                    <Users className="w-5 h-5" />
-                                    <span className="text-sm font-bold">Teams: {selectedStatement.teams}/{selectedStatement.max_teams}</span>
+                                <div className="flex items-center gap-2 text-oxford/60 bg-oxford/5 px-2 py-1 rounded-lg">
+                                    <Users className="w-4 h-4" />
+                                    <span className="text-xs font-bold">Teams: {selectedStatement.teams}/{selectedStatement.max_teams}</span>
                                 </div>
                             </div>
-                            <h1 className="text-2xl sm:text-4xl font-black text-oxford leading-tight">
+                            <h1 className="text-xl sm:text-2xl font-black text-oxford leading-tight">
                                 {selectedStatement.title}
                             </h1>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {hasSubmittedIdea ? (
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-300 rounded-xl">
-                                        <CheckCircle className="w-5 h-5 text-green-600" />
-                                        <span className="text-sm font-black text-green-700 uppercase tracking-widest">Submitted</span>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 border border-green-300 rounded-lg">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-black text-green-700 uppercase tracking-widest">Submitted</span>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 border-2 border-amber-300 rounded-xl">
-                                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                                        <span className="text-sm font-black text-amber-700 uppercase tracking-widest">Ready to Submit</span>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 border border-amber-300 rounded-lg">
+                                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                                        <span className="text-xs font-black text-amber-700 uppercase tracking-widest">Ready to Submit</span>
                                     </div>
                                 )}
                             </div>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             {hasSubmittedIdea ? (
-                                <button className="px-8 py-4 bg-oxford text-white font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-oxford-dark transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3">
-                                    <CheckCircle className="w-5 h-5" />
+                                <button className="px-6 py-2.5 bg-oxford text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-oxford-dark transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                                    <CheckCircle className="w-4 h-4" />
                                     View My Submission
                                 </button>
                             ) : (
-                                <button className="px-8 py-4 bg-oxford text-white font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-oxford-dark transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3">
-                                    <Filter className="w-5 h-5" />
+                                <button className="px-6 py-2.5 bg-oxford text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-oxford-dark transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                                    <Filter className="w-4 h-4" />
                                     Submit Your Idea
                                 </button>
                             )}
@@ -333,37 +333,37 @@ export default function Dashboard() {
                     </div>
 
                     {/* Problem Description */}
-                    <div className="bg-white rounded-2xl p-6 border border-oxford/10 shadow-sm">
-                        <h3 className="text-lg font-black text-oxford uppercase tracking-wide mb-4">Problem Statement</h3>
-                        <p className="text-oxford/80 text-base leading-relaxed">
+                    <div className="bg-white rounded-xl p-4 border border-oxford/10 shadow-sm">
+                        <h3 className="text-sm font-black text-oxford uppercase tracking-wide mb-3">Problem Statement</h3>
+                        <p className="text-oxford/80 text-sm leading-relaxed">
                             {selectedStatement.description}
                         </p>
                     </div>
 
                     {/* Additional Information Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                        <div className="bg-white rounded-xl p-6 border border-oxford/10 shadow-sm text-center">
-                            <div className="w-12 h-12 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Clock className="w-6 h-6 text-oxford" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <div className="bg-white rounded-lg p-4 border border-oxford/10 shadow-sm text-center">
+                            <div className="w-8 h-8 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <Clock className="w-4 h-4 text-oxford" />
                             </div>
-                            <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-2">Submission Deadline</h4>
-                            <p className="text-oxford font-bold">48H 12M Remaining</p>
+                            <h4 className="text-xs font-black text-oxford uppercase tracking-widest mb-1">Submission Deadline</h4>
+                            <p className="text-oxford font-bold text-sm">48H 12M Remaining</p>
                         </div>
                         
-                        <div className="bg-white rounded-xl p-6 border border-oxford/10 shadow-sm text-center">
-                            <div className="w-12 h-12 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Users className="w-6 h-6 text-oxford" />
+                        <div className="bg-white rounded-lg p-4 border border-oxford/10 shadow-sm text-center">
+                            <div className="w-8 h-8 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <Users className="w-4 h-4 text-oxford" />
                             </div>
-                            <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-2">Team Participation</h4>
-                            <p className="text-oxford font-bold">{selectedStatement.teams} out of {selectedStatement.max_teams}</p>
+                            <h4 className="text-xs font-black text-oxford uppercase tracking-widest mb-1">Team Participation</h4>
+                            <p className="text-oxford font-bold text-sm">{selectedStatement.teams} out of {selectedStatement.max_teams}</p>
                         </div>
                         
-                        <div className="bg-white rounded-xl p-6 border border-oxford/10 shadow-sm text-center">
-                            <div className="w-12 h-12 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Filter className="w-6 h-6 text-oxford" />
+                        <div className="bg-white rounded-lg p-4 border border-oxford/10 shadow-sm text-center">
+                            <div className="w-8 h-8 bg-oxford/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <Filter className="w-4 h-4 text-oxford" />
                             </div>
-                            <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-2">Department</h4>
-                            <p className="text-oxford font-bold">{selectedStatement.dept} Track</p>
+                            <h4 className="text-xs font-black text-oxford uppercase tracking-widest mb-1">Competition Level</h4>
+                            <p className="text-oxford font-bold text-sm">Inter-College</p>
                         </div>
                     </div>
                 </div>

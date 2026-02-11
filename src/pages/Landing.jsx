@@ -52,42 +52,140 @@ export default function Landing() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-            <div className="space-y-4 max-w-5xl">
-                <div className="space-y-2">
-                    <h1 className="text-responsive-h1 text-oxford tracking-tighter uppercase leading-[0.85]">
-                        Stella Mary's College of Engineering
-                    </h1>
-                    <p className="text-sm sm:text-lg text-oxford/70 font-medium">
+        <div className="relative flex flex-col items-center justify-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+            {/* Background Logo - Mobile: centered and larger, Desktop: bottom positioned */}
+            <div 
+                className="block sm:hidden fixed inset-0 bg-no-repeat opacity-10 z-0 pointer-events-none"
+                style={{ 
+                    backgroundImage: 'url(/clg-logo.png)',
+                    backgroundSize: '80%',
+                    backgroundPosition: 'center 60%'
+                }}
+            ></div>
+            <div 
+                className="hidden sm:block fixed inset-0 bg-no-repeat opacity-10 z-0 pointer-events-none"
+                style={{ 
+                    backgroundImage: 'url(/clg-logo.png)',
+                    backgroundSize: '35%',
+                    backgroundPosition: 'center 85%'
+                }}
+            ></div>
+            
+            {/* Content */}
+            <div className="relative z-10 space-y-4 max-w-6xl">
+                <div className="space-y-5">
+                    {/* Mobile Layout - Stacked */}
+                    <div className="block sm:hidden text-center space-y-1">
+                        <div className="relative flex items-center justify-center min-h-8">
+                            {/* Left logo - positioned independently */}
+                            <div className="absolute left-1/2 -translate-x-[calc(0%+140px)]">
+                                <img 
+                                    src="/clg-logo.png" 
+                                    alt="SMCE Logo" 
+                                    className="h-8 w-auto object-contain"
+                                />
+                            </div>
+                            
+                            {/* Center - College Name */}
+                            <div className="text-lg text-oxford tracking-tighter uppercase leading-[1] font-black">
+                                <div>Stella Mary's College</div>
+                                <div>of Engineering</div>
+                            </div>
+                            
+                            {/* Right logos - positioned independently */}
+                            <div className="absolute right-1/2 translate-x-[calc(35%+140px)] flex flex-row">
+                                <img 
+                                    src="/src/assets/accreditation-logos/naac-logo.png" 
+                                    alt="NAAC Accredited" 
+                                    className="h-6 w-auto object-contain"
+                                    onError={(e) => {e.target.style.display = 'none'}}
+                                />
+                                <img 
+                                    src="/src/assets/accreditation-logos/nba-logo.png" 
+                                    alt="NBA Accredited" 
+                                    className="h-6 w-auto object-contain -ml-1"
+                                    onError={(e) => {e.target.style.display = 'none'}}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-0">
+                            <p className="text-[8px] text-oxford/70 font-medium text-center">
+                                Affiliated To Anna University, Accredited by NAAC and NBA (Mech & CSE)
+                            </p>
+                            <p className="text-[8px] text-oxford/70 font-thin text-center">
+                                (AN AUTONOMOUS INSTITUTION)
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Desktop Layout - Horizontal */}
+                    <div className="hidden sm:flex items-center justify-center gap-5 ml-8">
+                        {/* Left side - College Logo */}
+                        <div className="shrink-0">
+                            <img 
+                                src="/clg-logo.png" 
+                                alt="SMCE Logo" 
+                                className="h-12 lg:h-16 w-auto object-contain"
+                            />
+                        </div>
+                        
+                        {/* Center - College Name */}
+                        <div className="flex-1 text-center">
+                            <div className="text-2xl lg:text-3xl xl:text-4xl text-oxford tracking-tighter uppercase leading-[0.85] font-black">
+                                <div> Stella Mary's College of Engineering </div>
+                                
+                            </div>
+                        </div>
+                        
+                        {/* Right side - Accreditation Logos */}
+                        <div className="shrink-0 flex flex-row">
+                            <img 
+                                src="/src/assets/accreditation-logos/naac-logo.png" 
+                                alt="NAAC Accredited" 
+                                className="h-10 lg:h-14 w-auto object-contain"
+                                onError={(e) => {e.target.style.display = 'none'}}
+                            />
+                            <img 
+                                src="/src/assets/accreditation-logos/nba-logo.png" 
+                                alt="NBA Accredited" 
+                                className="h-10 lg:h-14 w-auto object-contain -ml-6"
+                                onError={(e) => {e.target.style.display = 'none'}}
+                            />
+                        </div>
+                    </div>
+
+                    <p className="hidden sm:block text-lg text-oxford/70 font-medium -mt-7 text-center">
                         Affiliated To Anna University, Accredited by NAAC and NBA (Mech & CSE)
                     </p>
-                    <p className="text-sm sm:text-lg text-oxford/70 font-thin">
+                    <p className="hidden sm:block text-lg text-oxford/70 font-thin -mt-5 text-center">
                         (AN AUTONOMOUS INSTITUTION)
                     </p>
                     
                 </div>
-                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford/70 max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
-                    Inter-College Hackathon 2026. <br className="hidden sm:block" />
+                <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed">
+                    INTRA HACKATHON 2026 <br className="hidden sm:block" />
+                </p>
+                <p className="text-sm sm:text-lg lg:text-xl text-oxford/70 max-w-4xl mx-auto font-semibold -mt-5 tracking-tight leading-relaxed">
                     Innovate, Collaborate, and Build the Future using Zero-Cost Technologies.
                 </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 w-full max-w-xl px-4">
+            <div className="relative z-10 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md px-4 mt-8 sm:mt-12">
                 <button
                     onClick={() => navigate('/register')}
-                    className="flex-[1.5] bg-oxford text-white font-black py-5 px-10 rounded-2xl hover:bg-oxford-dark transition-all duration-200 shadow-lg hover:shadow-xl uppercase tracking-[0.2em] text-[10px] sm:text-base border-2 border-oxford-dark"
+                    className="flex-1 bg-oxford text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md hover:bg-opacity-90 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
                 >
-                    Register Your Team
+                    Register Team
                 </button>
                 <button
                     onClick={() => navigate('/login')}
-                    className="flex-1 bg-white text-oxford font-black py-5 px-10 rounded-2xl hover:bg-oxford/5 transition-all duration-200 shadow-lg hover:shadow-xl uppercase tracking-[0.2em] text-[10px] sm:text-base border-2 border-oxford"
+                    className="flex-1 bg-white text-oxford font-semibold py-3 px-6 rounded-lg border border-oxford/20 transition-all duration-200 shadow-sm hover:shadow-md hover:border-oxford/40 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
                 >
-                    Dashboard Login
+                    Dashboard
                 </button>
             </div>
 
-            <div className="pt-8 sm:pt-12 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-7xl px-4">
+            <div className="relative z-10 pt-8 sm:pt-12 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-7xl px-4">
                 {[
                     { title: "Select Problems", desc: "Choose from department-wise filterable problem statements with live locking logic." },
                     { title: "Submit Ideas", desc: "Professional platform to submit and track your team's innovative solutions." },
@@ -101,7 +199,7 @@ export default function Landing() {
             </div>
 
             {/* Rules Section */}
-            <section id="rules" className="pt-8 sm:pt-16 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
+            <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
                     <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter">Registration Rules</h2>
                     <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford" />
@@ -131,7 +229,7 @@ export default function Landing() {
             </section>
 
             {/* Guidelines Section */}
-            <section id="guidelines" className="pt-8 sm:pt-16 pb-6 sm:pb-10 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
+            <section id="guidelines" className="relative z-10 pt-8 sm:pt-16 pb-6 sm:pb-10 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
                     <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter text-right">Guidelines</h2>
                     <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford ml-auto" />
@@ -159,7 +257,7 @@ export default function Landing() {
             </section>
 
             {/* Contact Section */}
-            <section id="contact" className="pt-8 sm:pt-16 pb-8 sm:pb-12 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
+            <section id="contact" className="relative z-10 pt-8 sm:pt-16 pb-8 sm:pb-12 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4">
                     <h2 className="text-2xl lg:text-6xl font-black text-oxford uppercase tracking-tighter">Contact Us</h2>
                     <div className="w-12 sm:w-24 h-1 sm:h-2 bg-oxford" />
@@ -179,48 +277,48 @@ export default function Landing() {
                                 </div>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Email</h4>
-                                    <a href="mailto:hackathon@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all">hackathon@smce.edu.in</a>
+                                    <a href="mailto:intrahackathon2026@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all">intrahackathon2026@smce.edu.in</a>
                                 </div>
                             </div>
                             <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
                                 <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Phone</h4>
-                                <a href="tel:+919876543210" className="text-base sm:text-xl font-black text-oxford hover:text-oxford-light transition-all">+91 98765 43210</a>
+                                <a href="tel:+918608582295" className="text-base sm:text-xl font-black text-oxford hover:text-oxford-light transition-all">+91 86085 82295</a>
                             </div>
                             <div className="p-4 sm:p-6 bg-oxford/5 rounded-xl sm:rounded-2xl">
                                 <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-oxford/70">Location</h4>
                                 <p className="text-sm sm:text-base font-black text-oxford leading-relaxed">
                                     Stella Mary's College of Engineering<br />
                                     Kanyakumari District, Tamil Nadu<br />
-                                    India - 629202
+                                    629002
                                 </p>
                             </div>
                         </div>
 
                         {/* Social Media Links */}
-                        <div className="pt-4 space-y-4">
-                            <h4 className="text-lg sm:text-xl font-black text-oxford uppercase tracking-tight">Connect With Us</h4>
-                            <div className="flex items-center gap-4">
+                        <div className="pt-4 space-y-3">
+                            <h4 className="text-sm sm:text-base font-bold text-oxford uppercase tracking-wide">Connect With Us</h4>
+                            <div className="flex items-center gap-2.5">
                                 <a 
-                                    href="https://instagram.com/smce_hackathon" 
+                                    href="https://instagram.com/smcecoe" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl hover:shadow-2xl transition-all active:scale-95 group"
+                                    className="p-2.5 bg-gradient-to-br from-oxford to-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
                                 >
-                                    <Instagram className="w-6 h-6 sm:w-8 sm:h-8 text-white group-hover:scale-110 transition-transform" />
+                                    <Instagram className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
                                 <a 
-                                    href="https://linkedin.com/company/smce-hackathon" 
+                                    href="https://www.linkedin.com/school/stella-mary's-college-of-engineering" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="p-4 bg-[#0077B5] rounded-2xl hover:shadow-2xl transition-all active:scale-95 group"
+                                    className="p-2.5 bg-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
                                 >
-                                    <Linkedin className="w-6 h-6 sm:w-8 sm:h-8 text-white group-hover:scale-110 transition-transform" />
+                                    <Linkedin className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
                                 <a 
-                                    href="mailto:hackathon@smce.edu.in"
-                                    className="p-4 bg-oxford rounded-2xl hover:shadow-2xl transition-all active:scale-95 group"
+                                    href="mailto:intrahackathon2026@smce.edu.in"
+                                    className="p-2.5 bg-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
                                 >
-                                    <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-white group-hover:scale-110 transition-transform" />
+                                    <Mail className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
                             </div>
                         </div>
@@ -308,21 +406,21 @@ export default function Landing() {
                 </div>
 
                 {/* Additional Info Card to Fill Space */}
-                <div className="mt-6 bg-gradient-to-br from-oxford to-oxford-light text-white p-6 sm:p-10 rounded-3xl shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
-                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                        <div className="space-y-3">
-                            <div className="text-4xl sm:text-6xl font-black">48</div>
-                            <p className="text-sm sm:text-base font-bold uppercase tracking-widest text-white/70">Hours of Innovation</p>
+                <div className="mt-4 bg-gradient-to-br from-oxford to-oxford-light text-white p-4 sm:p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
+                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">30+</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Problem Statements</p>
                         </div>
-                        <div className="space-y-3">
-                            <div className="text-4xl sm:text-6xl font-black">100+</div>
-                            <p className="text-sm sm:text-base font-bold uppercase tracking-widest text-white/70">Participating Teams</p>
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">50+</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Participating Teams</p>
                         </div>
-                        <div className="space-y-3">
-                            <div className="text-4xl sm:text-6xl font-black">₹50K</div>
-                            <p className="text-sm sm:text-base font-bold uppercase tracking-widest text-white/70">Prize Pool</p>
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">Cash Prize</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Reward</p>
                         </div>
                     </div>
                 </div>

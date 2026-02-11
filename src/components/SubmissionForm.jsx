@@ -19,46 +19,85 @@ export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuc
         setIsSubmitting(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("No user session found");
+            // Get current user with error handling
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError) throw new Error(`Authentication error: ${authError.message}`);
+            if (!user) throw new Error("No user session found. Please log in again.");
 
-            // Fetch team ID
+            console.log('Current user ID:', user.id);
+
+            // Fetch team ID with improved error handling
             const { data: team, error: teamError } = await supabase
                 .from('teams')
-                .select('id')
+                .select('id, name, lead_id')
                 .eq('lead_id', user.id)
-                .single();
+                .maybeSingle();
 
-            if (teamError) throw teamError;
-
-            // Insert submission with proper error handling
-            const { data: insertedData, error: submitError } = await supabase
-                .from('submissions')
-                .insert([{
-                    team_id: team.id,
-                    statement_id: problemStatement.id,
-                    title: formData.title,
-                    description: formData.description,
-                    tech_stack: formData.techStack,
-                    solution_link: formData.solutionLink || null,
-                    status: 'submitted'
-                }])
-                .select()
-                .single();
-
-            if (submitError) {
-                console.error('Submit error:', submitError);
-                throw new Error(`Submission failed: ${submitError.message}`);
+            if (teamError) {
+                console.error('Team fetch error:', teamError);
+                throw new Error(`Failed to fetch team: ${teamError.message}`);
+            }
+            
+            if (!team) {
+                throw new Error("No team found for your account. Please register a team first.");
             }
 
+            console.log('Team found:', { id: team.id, name: team.name, lead_id: team.lead_id });
+
+            // Prepare submission data
+            const submissionData = {
+                team_id: team.id,
+                statement_id: problemStatement.id,
+                title: formData.title.trim(),
+                description: formData.description.trim(),
+                tech_stack: formData.techStack.trim(),
+                solution_link: formData.solutionLink.trim() || null,
+            };
+
+            console.log('Submitting data:', submissionData);
+
+            // Insert submission with detailed error handling
+            const { data: insertedData, error: submitError } = await supabase
+                .from('submissions')
+                .insert([submissionData])
+                .select()
+                .maybeSingle();
+
+            if (submitError) {
+                console.error('Submit error details:', {
+                    code: submitError.code,
+                    message: submitError.message,
+                    details: submitError.details,
+                    hint: submitError.hint
+                });
+                
+                // Provide user-friendly error messages
+                let errorMessage = 'Submission failed';
+                if (submitError.code === '42501') {
+                    errorMessage = 'Permission denied. Please ensure you are logged in as a team lead.';
+                } else if (submitError.code === '23505') {
+                    errorMessage = 'You have already submitted for this problem statement.';
+                } else {
+                    errorMessage = `${errorMessage}: ${submitError.message}`;
+                }
+                
+                throw new Error(errorMessage);
+            }
+
+            if (!insertedData) {
+                throw new Error('Submission was processed but no confirmation received. Please check your dashboard.');
+            }
+
+            console.log('Submission successful:', insertedData);
             setIsSubmitted(true);
+            
             // Call the success callback with the submission data
             if (onSubmitSuccess) {
                 onSubmitSuccess(insertedData);
             }
         } catch (error) {
             console.error('Submission error:', error);
-            alert(`Failed to submit: ${error.message}`);
+            alert(error.message || 'Failed to submit. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
