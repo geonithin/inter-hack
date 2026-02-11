@@ -97,13 +97,13 @@ export default function Landing() {
                             {/* Right logos - positioned independently */}
                             <div className="absolute right-1/2 translate-x-[calc(35%+140px)] flex flex-row">
                                 <img 
-                                    src="/src/assets/accreditation-logos/naac-logo.png" 
+                                    src="/naac-logo.png" 
                                     alt="NAAC Accredited" 
                                     className="h-6 w-auto object-contain"
                                     onError={(e) => {e.target.style.display = 'none'}}
                                 />
                                 <img 
-                                    src="/src/assets/accreditation-logos/nba-logo.png" 
+                                    src="/nba-logo.png" 
                                     alt="NBA Accredited" 
                                     className="h-6 w-auto object-contain -ml-1"
                                     onError={(e) => {e.target.style.display = 'none'}}
@@ -142,13 +142,13 @@ export default function Landing() {
                         {/* Right side - Accreditation Logos */}
                         <div className="shrink-0 flex flex-row">
                             <img 
-                                src="/src/assets/accreditation-logos/naac-logo.png" 
+                                src="/naac-logo.png" 
                                 alt="NAAC Accredited" 
                                 className="h-10 lg:h-14 w-auto object-contain"
                                 onError={(e) => {e.target.style.display = 'none'}}
                             />
                             <img 
-                                src="/src/assets/accreditation-logos/nba-logo.png" 
+                                src="/nba-logo.png" 
                                 alt="NBA Accredited" 
                                 className="h-10 lg:h-14 w-auto object-contain -ml-6"
                                 onError={(e) => {e.target.style.display = 'none'}}
