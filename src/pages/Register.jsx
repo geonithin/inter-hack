@@ -276,11 +276,12 @@ export default function Register() {
                                         <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Department</label>
                                         <select required value={teamData.department} onChange={(e) => setTeamData({ ...teamData, department: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base">
                                             <option value="">Select Department</option>
-                                            <option value="CSE">Computer Science</option>
-                                            <option value="ECE">Electronics</option>
-                                            <option value="MECH">Mechanical</option>
-                                            <option value="CIVIL">Civil</option>
-                                            <option value="EEE">Electrical</option>
+                                            <option value="CSE">Computer Science and Engineering</option>
+                                            <option value="ECE">Electronics and Communication Engineering</option>
+                                            <option value="MECH">Mechanical Engineering</option>
+                                            <option value="CIVIL">Civil Engineering</option>
+                                            <option value="AI&DS">Artificial Intelligence and Data Science</option>
+                                            <option value="EEE">Electrical and Electronics Engineering</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
