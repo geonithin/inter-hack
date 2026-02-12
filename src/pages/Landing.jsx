@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Mail, Instagram, Linkedin, Send, CheckCircle, Phone, MapPin } from 'lucide-react';
+import { Mail, Instagram, Linkedin, Send, CheckCircle, Phone, MapPin, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -89,7 +89,7 @@ export default function Landing() {
                             </div>
                             
                             {/* Center - College Name */}
-                            <div className="text-lg text-oxford tracking-tighter uppercase leading-[1] font-black">
+                            <div className="text-lg text-oxford tracking-tighter uppercase leading-none font-black">
                                 <div>Stella Mary's College</div>
                                 <div>of Engineering</div>
                             </div>
@@ -172,6 +172,25 @@ export default function Landing() {
                 </p>
             </div>
 
+            {/* Go to Dashboard button - only for logged-in users */}
+            {isAuthenticated() && (
+                <div className="relative z-10 mt-8 sm:mt-12">
+                    <button
+                        onClick={() => {
+                            const role = getUserRole();
+                            if (role === 'faculty' || role === 'admin') {
+                                navigate('/faculty', { replace: true });
+                            } else {
+                                navigate('/dashboard', { replace: true });
+                            }
+                        }}
+                        className="bg-oxford text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:bg-opacity-90 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
+                    >
+                        Go to Dashboard
+                    </button>
+                </div>
+            )}
+
             {/* Only show these buttons when user is NOT logged in */}
             {!isAuthenticated() && (
                 <div className="relative z-10 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md px-4 mt-8 sm:mt-12">
@@ -185,7 +204,7 @@ export default function Landing() {
                         onClick={() => navigate('/login')}
                         className="flex-1 bg-white text-oxford font-semibold py-3 px-6 rounded-lg border border-oxford/20 transition-all duration-200 shadow-sm hover:shadow-md hover:border-oxford/40 hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wide text-xs sm:text-sm"
                     >
-                        Dashboard
+                        Login
                     </button>
                 </div>
             )}
@@ -313,7 +332,7 @@ export default function Landing() {
                                     href="https://instagram.com/smcecoe" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="p-2.5 bg-gradient-to-br from-oxford to-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
+                                    className="p-2.5 bg-linear-to-br from-oxford to-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
                                 >
                                     <Instagram className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
@@ -326,15 +345,15 @@ export default function Landing() {
                                     <Linkedin className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
                                 <a 
-                                    href="mailto:intrahackathon2026@smce.edu.in"
+                                    href="https://stellamaryscoe.edu.in/"
                                     className="p-2.5 bg-oxford rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
                                 >
-                                    <Mail className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+                                    <Globe className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                                 </a>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-gradient-to-br from-oxford via-oxford to-oxford-dark text-white p-8 sm:p-10 rounded-3xl shadow-2xl space-y-6 border border-white/10">
+                    <div className="bg-linear-to-br from-oxford via-oxford to-oxford-dark text-white p-8 sm:p-10 rounded-3xl shadow-2xl space-y-6 border border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="p-3 bg-white/10 rounded-xl">
                                 <Send className="w-6 h-6 text-white" />
@@ -417,7 +436,7 @@ export default function Landing() {
                 </div>
 
                 {/* Additional Info Card to Fill Space */}
-                <div className="mt-4 bg-gradient-to-br from-oxford to-oxford-light text-white p-4 sm:p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                <div className="mt-4 bg-linear-to-br from-oxford to-oxford-light text-white p-4 sm:p-6 rounded-2xl shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
                     <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
                     <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">

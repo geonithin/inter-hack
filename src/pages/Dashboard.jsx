@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SubmissionForm from '../components/SubmissionForm';
@@ -6,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
     const [team, setTeam] = useState(null);
     const [problemStatements, setProblemStatements] = useState([]);
@@ -226,13 +228,29 @@ export default function Dashboard() {
             return;
         }
 
+        // Check if team has already submitted - failsafe
+        if (hasSubmittedIdea && selectedStatement) {
+            showNotification('Cannot switch problem statements after submission!', 'error');
+            setIsConfirming(null);
+            return;
+        }
+
         try {
             const { error: updateError } = await supabase
                 .from('teams')
                 .update({ selected_statement_id: isConfirming.id })
                 .eq('id', team.id);
 
-            if (updateError) throw updateError;
+            if (updateError) {
+                // Check for RLS policy violation (statement locked after submission)
+                if (updateError.message?.includes('policy') || updateError.code === '42501') {
+                    showNotification('Cannot change problem statement after submitting your idea!', 'error');
+                } else {
+                    throw updateError;
+                }
+                setIsConfirming(null);
+                return;
+            }
 
             setSelectedStatement(isConfirming);
             setHasSelected(true);
@@ -272,6 +290,7 @@ export default function Dashboard() {
         } catch (error) {
             console.error('Error updating selection:', error);
             showNotification('Failed to save selection. Please try again.', 'error');
+            setIsConfirming(null);
         }
     };
 
@@ -286,11 +305,14 @@ export default function Dashboard() {
 
     if (selectedStatement && hasSelected) {
         return (
-            <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200 px-4 overflow-x-hidden">
                 {/* Back Button */}
                 <div className="flex justify-start mb-4">
                     <button
-                        onClick={() => { setHasSelected(false); }}
+                        onClick={() => {
+                            setHasSelected(false);
+                            setSelectedStatement(null);
+                        }}
                         className="text-[10px] sm:text-xs font-black text-oxford uppercase border border-oxford px-3 py-1.5 rounded-lg hover:bg-oxford hover:text-white transition-all shadow-sm active:scale-95 tracking-widest bg-white"
                     >
                         ← Back to Problem Statements
@@ -298,7 +320,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Enhanced Problem Statement View */}
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-oxford/15 shadow-lg transition-all p-6">
+                <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl border border-oxford/15 shadow-lg transition-all p-6">
                     {/* Header */}
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                         <div className="space-y-3">
@@ -398,25 +420,65 @@ export default function Dashboard() {
                         <div className="grid gap-6">
                             <div className="bg-white p-6 rounded-2xl border border-oxford/10 shadow-sm">
                                 <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-3 opacity-60">Solution Title</h4>
-                                <p className="text-oxford font-bold text-xl">{submissionData?.title}</p>
+                                <p 
+                                    className="text-oxford font-bold text-xl"
+                                    style={{ 
+                                        wordBreak: 'break-all',
+                                        overflowWrap: 'break-word',
+                                        wordWrap: 'break-word',
+                                        maxWidth: '100%'
+                                    }}
+                                >
+                                    {submissionData?.title}
+                                </p>
                             </div>
                             
                             <div className="bg-white p-6 rounded-2xl border border-oxford/10 shadow-sm">
                                 <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-3 opacity-60">Solution Description</h4>
-                                <p className="text-oxford/80 leading-relaxed">{submissionData?.description}</p>
+                                <p 
+                                    className="text-oxford/80 leading-relaxed whitespace-pre-wrap"
+                                    style={{ 
+                                        wordBreak: 'break-all',
+                                        overflowWrap: 'break-word',
+                                        wordWrap: 'break-word',
+                                        maxWidth: '100%'
+                                    }}
+                                >
+                                    {submissionData?.description}
+                                </p>
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-white p-6 rounded-2xl border border-oxford/10 shadow-sm">
                                     <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-3 opacity-60">Technologies Used</h4>
-                                    <p className="text-oxford font-medium">{submissionData?.tech_stack}</p>
+                                    <p 
+                                        className="text-oxford font-medium"
+                                        style={{ 
+                                            wordBreak: 'break-all',
+                                            overflowWrap: 'break-word',
+                                            wordWrap: 'break-word',
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        {submissionData?.tech_stack}
+                                    </p>
                                 </div>
                                 
                                 {submissionData?.solution_link && (
                                     <div className="bg-white p-6 rounded-2xl border border-oxford/10 shadow-sm">
                                         <h4 className="text-sm font-black text-oxford uppercase tracking-widest mb-3 opacity-60">Project Link</h4>
-                                        <a href={submissionData.solution_link} target="_blank" rel="noopener noreferrer" 
-                                           className="text-oxford hover:text-oxford-dark underline font-medium break-all">
+                                        <a 
+                                            href={submissionData.solution_link} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-oxford hover:text-oxford-dark underline font-medium block"
+                                            style={{ 
+                                                wordBreak: 'break-all',
+                                                overflowWrap: 'break-word',
+                                                wordWrap: 'break-word',
+                                                maxWidth: '100%'
+                                            }}
+                                        >
                                             {submissionData.solution_link}
                                         </a>
                                     </div>
@@ -451,7 +513,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <h3 className="font-black text-oxford text-sm uppercase">Idea Submitted Successfully!</h3>
-                            <p className="text-xs text-oxford/70">Your submission is locked. You can view but not select other problem statements.</p>
+                            <p className="text-xs text-oxford/70">Your submission is locked. You cannot switch problem statements after submitting your idea.</p>
                         </div>
                     </div>
                 </div>
@@ -519,7 +581,7 @@ export default function Dashboard() {
                         <div key={statement.id} className={cn(
                             "bg-white rounded-xl sm:rounded-2xl border-2 sm:border-3 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden",
                             isSelected 
-                                ? "border-emerald-500 bg-gradient-to-r from-emerald-50 to-white" 
+                                ? "border-emerald-500 bg-linear-to-r from-emerald-50 to-white" 
                                 : "border-gray-200 hover:border-oxford/30"
                         )}>
                             {/* Card Content */}
@@ -576,6 +638,12 @@ export default function Dashboard() {
                                                         <span className="sm:hidden">View</span>
                                                         <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                                                     </button>
+                                                ) : hasSubmittedIdea && !isSelected ? (
+                                                    <div className="flex-1 sm:flex-none px-3 py-2 sm:px-6 sm:py-2.5 bg-gray-100 text-gray-500 font-bold text-[10px] sm:text-sm uppercase tracking-wider rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 cursor-not-allowed">
+                                                        <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                                        <span className="hidden sm:inline">Locked</span>
+                                                        <span className="sm:hidden">Locked</span>
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={(e) => {
@@ -651,7 +719,7 @@ export default function Dashboard() {
                     <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
                         
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-oxford to-oxford-dark p-6 text-white">
+                        <div className="bg-linear-to-r from-oxford to-oxford-dark p-6 text-white">
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-white/20 rounded-full">
                                     <Filter className="w-6 h-6 text-white" />
@@ -687,7 +755,7 @@ export default function Dashboard() {
                                     </div>
                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                         <div className="flex items-start gap-3">
-                                            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                                             <div>
                                                 <p className="text-sm font-bold text-blue-900 mb-1">Track Switch Notice</p>
                                                 <p className="text-xs text-blue-700">Your current selection will be replaced. Any work related to your previous selection may need adjustment.</p>

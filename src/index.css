@@ -38,6 +38,14 @@
 
 @layer utilities {
 
+  /* Word wrapping utilities for long text */
+  .word-wrap-break {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
   /* Spacious Container Optimization */
   .container-wide {
     @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-screen-xl;

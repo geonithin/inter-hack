@@ -15,8 +15,7 @@ import {
   FacultyRoute, 
   AdminRoute, 
   PublicOnlyRoute,
-  PublicRoute,
-  UnauthorizedPage 
+  PublicRoute
 } from './components/ProtectedRoute';
 
 function App() {
@@ -87,9 +86,6 @@ function App() {
                   </AdminRoute>
                 } 
               />
-              
-              {/* Unauthorized page */}
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
               
               {/* Catch-all redirect to home */}
               <Route path="*" element={<Landing />} />

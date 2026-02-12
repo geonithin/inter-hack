@@ -60,22 +60,22 @@ export const ProtectedRoute = ({
       }
       
       // User is authenticated but doesn't have the right role
-      console.warn('Access denied:', {
+      // Auto-redirect to the correct dashboard instead of showing Access Denied
+      console.warn('Role mismatch, redirecting to correct dashboard:', {
         userRole,
         requiredRole,
         path: location.pathname
       });
       
-      return <Navigate 
-        to="/unauthorized" 
-        state={{ 
-          from: location.pathname,
-          requiredRole,
-          userRole,
-          message: `Access denied. This page requires ${requiredRole} privileges. You have ${userRole || 'unknown'} role.`
-        }}
-        replace 
-      />;
+      // Redirect to appropriate dashboard based on actual role
+      if (userRole === 'faculty' || userRole === 'admin') {
+        return <Navigate to="/faculty" replace />;
+      } else if (userRole === 'lead') {
+        return <Navigate to="/dashboard" replace />;
+      }
+      
+      // Fallback to home if role is unknown
+      return <Navigate to="/" replace />;
     }
   }
 

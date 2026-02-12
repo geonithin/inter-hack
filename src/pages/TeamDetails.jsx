@@ -564,8 +564,8 @@ export default function TeamDetails() {
                     </div>
 
                     {/* Right Column - Submission Details */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white p-7 rounded-2xl shadow-xl border border-oxford/10 sticky top-8 hover:shadow-2xl transition-shadow duration-300">
+                    <div className="lg:col-span-1 overflow-hidden">
+                        <div className="bg-white p-7 rounded-2xl shadow-xl border border-oxford/10 sticky top-8 hover:shadow-2xl transition-shadow duration-300 overflow-hidden">
                             <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-oxford/5">
                                 <div className={cn(
                                     "p-3 rounded-xl shadow-sm",
@@ -600,21 +600,21 @@ export default function TeamDetails() {
                                     </div>
 
                                     {/* Idea Title */}
-                                    <div>
+                                    <div className="overflow-hidden">
                                         <p className="text-xs font-black text-oxford/40 uppercase tracking-widest mb-3">
                                             Idea Title
                                         </p>
-                                        <h3 className="text-lg font-black text-oxford leading-tight">
+                                        <h3 className="text-lg font-black text-oxford leading-tight" style={{ overflowWrap: 'break-word', wordBreak: 'break-all', maxWidth: '100%' }}>
                                             {submission.title}
                                         </h3>
                                     </div>
 
                                     {/* Solution Overview */}
-                                    <div>
+                                    <div className="overflow-hidden">
                                         <p className="text-xs font-black text-oxford/40 uppercase tracking-widest mb-3">
                                             Solution Overview
                                         </p>
-                                        <p className="text-sm text-oxford/70 leading-relaxed">
+                                        <p className="text-sm text-oxford/70 leading-relaxed" style={{ overflowWrap: 'break-word', wordBreak: 'break-all', maxWidth: '100%' }}>
                                             {submission.description}
                                         </p>
                                     </div>

@@ -402,7 +402,7 @@ export default function Layout() {
                                             )}
                                         </button>
                                     }
-                                </>,
+                                </>
                             ) : (
                                 <>
                                     <div className="border-t border-gray-200 pt-2 mt-2">
@@ -463,9 +463,9 @@ export default function Layout() {
             {location.pathname !== '/' && (
                 <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-200">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate(-1)}
                         className="p-2 sm:p-3 bg-oxford/5 rounded-xl sm:rounded-2xl text-oxford/40 hover:text-oxford hover:bg-oxford/10 transition-all active:scale-90 group inline-flex items-center justify-center shadow-sm border border-oxford/5"
-                        title="Back to Home"
+                        title="Go Back"
                     >
                         <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 group-hover:-translate-x-1 transition-transform" />
                     </button>
