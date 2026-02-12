@@ -700,59 +700,59 @@ export default function FacultyDashboard() {
     return (
         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
             {/* Header Section */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl border-2 border-oxford/10 shadow-xl p-8 mb-8">
+            <div className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50 to-white rounded-2xl sm:rounded-3xl border-2 border-oxford/10 shadow-xl p-4 sm:p-8 mb-4 sm:mb-8">
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-5">
-                    <div className="absolute -top-4 -right-4 w-20 h-20 bg-oxford rounded-full"></div>
-                    <div className="absolute top-6 -left-6 w-12 h-12 bg-oxford rounded-full"></div>
-                    <div className="absolute bottom-4 right-16 w-8 h-8 bg-oxford rounded-full"></div>
+                    <div className="absolute -top-4 -right-4 w-14 sm:w-20 h-14 sm:h-20 bg-oxford rounded-full"></div>
+                    <div className="absolute top-6 -left-6 w-8 sm:w-12 h-8 sm:h-12 bg-oxford rounded-full"></div>
+                    <div className="absolute bottom-4 right-16 w-6 sm:w-8 h-6 sm:h-8 bg-oxford rounded-full"></div>
                 </div>
                 
-                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-oxford/10 backdrop-blur-sm rounded-xl border border-oxford/20">
-                                <Users className="w-8 h-8 text-oxford" />
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-6">
+                    <div className="space-y-2 sm:space-y-4">
+                        <div className="flex items-center gap-2.5 sm:gap-4">
+                            <div className="p-2 sm:p-3 bg-oxford/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-oxford/20">
+                                <Users className="w-5 h-5 sm:w-8 sm:h-8 text-oxford" />
                             </div>
                             <div>
-                                <h1 className="text-2xl sm:text-4xl font-black text-oxford uppercase tracking-tight">Faculty Portal</h1>
-                                <p className="text-sm text-oxford/60 font-medium mt-1">Institutional Oversight & Management</p>
+                                <h1 className="text-lg sm:text-4xl font-black text-oxford uppercase tracking-tight">Faculty Portal</h1>
+                                <p className="text-[10px] sm:text-sm text-oxford/60 font-medium mt-0.5 sm:mt-1">Institutional Oversight & Management</p>
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-3 pl-16">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs text-oxford/70 font-semibold">
+                        <div className="flex items-center gap-2 sm:gap-3 pl-10 sm:pl-16">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-[10px] sm:text-xs text-oxford/70 font-semibold">
                                 Real-time Monitoring Active
                             </span>
                         </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row items-end gap-4">
+                    <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-4">
                         {/* View Toggle */}
-                        <div className="flex bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl border-2 border-oxford/15 shadow-lg">
+                        <div className="flex bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border-2 border-oxford/15 shadow-lg">
                             <button
                                 onClick={() => setCurrentView('teams')}
                                 className={cn(
-                                    "px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center gap-2",
+                                    "px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
                                     currentView === 'teams' 
                                         ? "bg-oxford text-white shadow-lg transform scale-105" 
                                         : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
                                 )}
                             >
-                                <Users className="w-4 h-4" />
+                                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 Teams
                             </button>
                             <button
                                 onClick={() => setCurrentView('statements')}
                                 className={cn(
-                                    "px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center gap-2",
+                                    "px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
                                     currentView === 'statements' 
                                         ? "bg-oxford text-white shadow-lg transform scale-105" 
                                         : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
                                 )}
                             >
-                                <FileText className="w-4 h-4" />
+                                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 Statements
                             </button>
                         </div>
@@ -761,15 +761,15 @@ export default function FacultyDashboard() {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-6">
                 {STATS.map((stat, i) => (
-                    <div key={i} className="bg-white p-5 sm:p-6 rounded-3xl oxford-edge shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black text-oxford/40 uppercase tracking-[0.2em]">{stat.label}</p>
-                            <p className="text-2xl sm:text-3xl font-black text-oxford">{stat.value}</p>
+                    <div key={i} className="bg-white p-3 sm:p-6 rounded-xl sm:rounded-3xl oxford-edge shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all">
+                        <div className="space-y-0.5 sm:space-y-1">
+                            <p className="text-[8px] sm:text-[10px] font-black text-oxford/40 uppercase tracking-[0.15em] sm:tracking-[0.2em]">{stat.label}</p>
+                            <p className="text-lg sm:text-3xl font-black text-oxford">{stat.value}</p>
                         </div>
-                        <div className={cn("p-4 rounded-2xl transition-all group-hover:rotate-12", stat.bg, stat.color)}>
-                            <stat.icon className="w-6 h-6 sm:w-8 sm:h-8" />
+                        <div className={cn("p-2 sm:p-4 rounded-xl sm:rounded-2xl transition-all group-hover:rotate-12", stat.bg, stat.color)}>
+                            <stat.icon className="w-4 h-4 sm:w-8 sm:h-8" />
                         </div>
                     </div>
                 ))}

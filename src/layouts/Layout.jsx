@@ -186,7 +186,7 @@ export default function Layout() {
                 "bg-white text-oxford sticky top-0 z-50 transition-all duration-150",
                 isScrolled ? "shadow-lg backdrop-blur-xl bg-white/70" : "shadow-sm bg-white/90 backdrop-blur-sm"
             )}>
-                <div className="px-4 sm:px-6 max-w-none w-full h-12 sm:h-16 flex items-center justify-between pr-0">
+                <div className="px-4 sm:px-6 max-w-none w-full h-12 sm:h-16 flex items-center justify-between">
                     <div className="flex items-center shrink-0">
                         <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
                             <div className="p-1 sm:p-1 bg-white rounded-lg border-2 border-oxford flex items-center justify-center">
@@ -463,7 +463,19 @@ export default function Layout() {
             {location.pathname !== '/' && (
                 <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-200">
                     <button
-                        onClick={() => navigate(-1)}
+                        onClick={() => {
+                            // Deterministic back navigation based on current route
+                            const path = location.pathname;
+                            if (path.startsWith('/faculty/team/')) {
+                                navigate('/faculty');
+                            } else if (path === '/faculty' || path === '/dashboard' || path === '/admin') {
+                                navigate('/');
+                            } else if (path === '/login' || path === '/register') {
+                                navigate('/');
+                            } else {
+                                navigate('/');
+                            }
+                        }}
                         className="p-2 sm:p-3 bg-oxford/5 rounded-xl sm:rounded-2xl text-oxford/40 hover:text-oxford hover:bg-oxford/10 transition-all active:scale-90 group inline-flex items-center justify-center shadow-sm border border-oxford/5"
                         title="Go Back"
                     >
