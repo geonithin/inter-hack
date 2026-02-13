@@ -18,45 +18,60 @@ export default function TeamDetails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [exporting, setExporting] = useState(false);
-    
-    // Quick test function to check database connectivity
-    const testDatabase = async () => {
-        try {
-            console.log('🧪 Testing database connection...');
-            const { data: profileTest } = await supabase.from('profiles').select('id').limit(1);
-            console.log('✅ Profiles table accessible:', profileTest?.length || 0);
-            
-            const { data: teamsTest } = await supabase.from('teams').select('id, name').limit(3);
-            console.log('✅ Teams table accessible:', teamsTest?.length || 0, teamsTest);
-            
-            const { data: submissionsTest, error: subError } = await supabase.from('submissions').select('*').limit(3);
-            console.log('🎯 Submissions table test:', { count: submissionsTest?.length || 0, error: subError?.message, data: submissionsTest });
-        } catch (e) {
-            console.error('💥 Database test failed:', e);
-        }
-    };
 
     const fetchTeamDetails = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Fetch team details with problem statement and lead profile
+            // Fetch team details
             const { data: teamData, error: teamError } = await supabase
                 .from('teams')
-                .select(`
-                    *,
-                    problem_statements(*),
-                    profiles!teams_lead_id_fkey(full_name, email)
-                `)
+                .select('*')
                 .eq('id', id)
                 .single();
 
-            if (teamError) throw teamError;
+            if (teamError) {
+                throw teamError;
+            }
             if (!teamData) throw new Error('Team not found');
 
-            setTeam(teamData);
-            setProblemStatement(teamData.problem_statements);
+            // Fetch team lead profile if lead_id exists
+            let teamLeadProfile = null;
+            if (teamData.lead_id) {
+                const { data: leadData, error: leadError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, email')
+                    .eq('id', teamData.lead_id)
+                    .single();
+
+                if (!leadError && leadData) {
+                    teamLeadProfile = leadData;
+                }
+            }
+
+            // Fetch problem statement if selected_statement_id exists
+            let problemStatementData = null;
+            if (teamData.selected_statement_id) {
+                const { data: psData, error: psError } = await supabase
+                    .from('problem_statements')
+                    .select('*')
+                    .eq('id', teamData.selected_statement_id)
+                    .single();
+
+                if (!psError && psData) {
+                    problemStatementData = psData;
+                }
+            }
+
+            // Combine team data with lead profile
+            const enrichedTeamData = {
+                ...teamData,
+                profiles: teamLeadProfile
+            };
+
+            setTeam(enrichedTeamData);
+            setProblemStatement(problemStatementData);
 
             // Fetch team members
             const { data: membersData, error: membersError } = await supabase
@@ -65,64 +80,30 @@ export default function TeamDetails() {
                 .eq('team_id', id)
                 .order('name');
 
-            if (membersError) throw membersError;
-            setTeamMembers(membersData || []);
-
-            // Fetch team submission if exists - with comprehensive debugging
-            console.log('🔍 Starting submission fetch for team_id:', id, 'type:', typeof id);
-            
-            // Test 1: Check if submissions table exists
-            try {
-                const { count, error: countError } = await supabase
-                    .from('submissions')
-                    .select('*', { count: 'exact', head: true });
-                console.log('📊 Submissions table check - count:', count, 'error:', countError);
-            } catch (e) {
-                console.log('⚠️ Table check failed:', e.message);
+            if (!membersError && membersData) {
+                setTeamMembers(membersData);
+            } else {
+                setTeamMembers([]);
             }
-            
-            // Test 2: Get all submissions (to check if table has any data at all)
-            const { data: allSubmissions, error: allError } = await supabase
-                .from('submissions')
-                .select('*')
-                .limit(10);
-            console.log('📝 All submissions in table:', allSubmissions?.length || 0, 'error:', allError?.message);
-            
-            // Test 3: Check team existence and get team details
-            const { data: teamCheck, error: teamCheckError } = await supabase
-                .from('teams')
-                .select('id, name')
-                .eq('id', id)
-                .single();
-            console.log('👥 Team exists check:', { teamCheck, teamCheckError });
-            
-            // Test 4: Main submission query
+
+            // Fetch team submission if exists
             const { data: submissionData, error: submissionError } = await supabase
                 .from('submissions')
                 .select('*')
-                .eq('team_id', id);
+                .eq('team_id', id)
+                .order('created_at', { ascending: false })
+                .limit(1);
 
-            console.log('🎯 Final submission query result:', { 
-                submissionData, 
-                submissionError,
-                teamId: id,
-                foundCount: submissionData?.length || 0
-            });
-            
             if (submissionError) {
-                console.warn('❌ Error fetching submission:', submissionError);
                 if (submissionError.message?.includes('relation "submissions" does not exist')) {
-                    console.error('🚫 CRITICAL: Submissions table does not exist!');
                     setError('Submissions table missing - please run the migration');
                 } else if (submissionError.message?.includes('permission denied')) {
-                    console.error('🔒 CRITICAL: Permission denied - check RLS policies');
                     setError('Permission denied - check database policies');
                 }
+                setSubmission(null);
             } else if (submissionData && submissionData.length > 0) {
-                console.log('✅ SUCCESS: Found submission:', submissionData[0]);
                 setSubmission(submissionData[0]);
             } else {
-                console.log('ℹ️ INFO: No submissions found for team:', id);
                 setSubmission(null);
             }
 
@@ -178,10 +159,10 @@ export default function TeamDetails() {
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             const leadInfo = [
-                ['Name:', team.profiles?.full_name || 'Unknown'],
-                ['Email:', team.profiles?.email || 'Not provided'],
-                ['Department:', team.department || 'Unknown'],
-                ['Year - Section:', `${team.year} - ${team.section}`]
+                ['Name:', team?.profiles?.full_name || 'Lead information pending'],
+                ['Email:', team?.profiles?.email || 'Email pending'],
+                ['Department:', team.department || 'Department pending'],
+                ['Year - Section:', `${team.year || 'Year pending'} - ${team.section || 'Section pending'}`]
             ];
             
             leadInfo.forEach(([label, value]) => {
@@ -344,9 +325,6 @@ export default function TeamDetails() {
             navigate('/unauthorized');
             return;
         }
-
-        // Run database test first
-        testDatabase();
         
         fetchTeamDetails();
     }, [id, isAuthenticated, getUserRole, navigate, fetchTeamDetails]);
@@ -446,7 +424,7 @@ export default function TeamDetails() {
                                         Full Name
                                     </p>
                                     <p className="text-lg font-black text-oxford uppercase">
-                                        {team.profiles?.full_name || 'Unknown'}
+                                        {team?.profiles?.full_name || 'Lead information pending'}
                                     </p>
                                 </div>
                                 <div>
@@ -456,7 +434,7 @@ export default function TeamDetails() {
                                     <div className="flex items-center gap-2">
                                         <Mail className="w-4 h-4 text-oxford/60" />
                                         <p className="text-sm font-medium text-oxford">
-                                            {team.profiles?.email || 'Not provided'}
+                                            {team?.profiles?.email || 'Email pending'}
                                         </p>
                                     </div>
                                 </div>
@@ -465,7 +443,7 @@ export default function TeamDetails() {
                                         Department
                                     </p>
                                     <p className="text-lg font-black text-oxford uppercase">
-                                        {team.department || 'Unknown'}
+                                        {team.department || 'Department pending'}
                                     </p>
                                 </div>
                                 <div>
@@ -493,30 +471,34 @@ export default function TeamDetails() {
                                 <div className="grid gap-4">
                                     {teamMembers.map((member) => (
                                         <div key={member.id} className="bg-gradient-to-br from-gray-50 to-oxford/5 p-5 rounded-xl border border-oxford/10 hover:border-oxford/20 transition-all duration-200 hover:shadow-md">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                                <div>
-                                                    <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
-                                                        Name
-                                                    </p>
-                                                    <p className="font-bold text-oxford text-sm">{member.name}</p>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
+                                                            Name
+                                                        </p>
+                                                        <p className="font-bold text-oxford text-sm">{member.name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
+                                                            Email
+                                                        </p>
+                                                        <p className="font-medium text-oxford/80 text-xs break-words">{member.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
-                                                        Email
-                                                    </p>
-                                                    <p className="font-medium text-oxford/80 text-xs">{member.email}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
-                                                        Department
-                                                    </p>
-                                                    <p className="font-bold text-oxford text-sm uppercase">{member.department}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
-                                                        Year
-                                                    </p>
-                                                    <p className="font-bold text-oxford text-sm">{member.year}</p>
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
+                                                            Department
+                                                        </p>
+                                                        <p className="font-bold text-oxford text-sm uppercase">{member.department}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-oxford/40 uppercase tracking-widest">
+                                                            Year
+                                                        </p>
+                                                        <p className="font-bold text-oxford text-sm">{member.year}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -677,18 +659,18 @@ export default function TeamDetails() {
                                     {error?.includes('submissions') ? (
                                         <div className="space-y-4">
                                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
-                                                <h4 className="font-bold text-amber-800 mb-2">🔧 Setup Required</h4>
+                                                <h4 className="font-bold text-amber-800 mb-2">🔧 Database Setup Required</h4>
                                                 <p className="text-sm text-amber-700 mb-2">
-                                                    The submissions table needs to be created in your database.
+                                                    The submissions system needs to be initialized.
                                                 </p>
                                                 <p className="text-xs text-amber-600">
-                                                    Please run the migration in <code>supabase/migrations/20260210_fix_submissions_table.sql</code> in your Supabase SQL editor.
+                                                    Please contact your administrator to set up the submissions table.
                                                 </p>
                                             </div>
                                             <div className="text-center py-4 text-oxford/40">
                                                 <Edit className="w-12 h-12 mx-auto mb-3 opacity-30" />
                                                 <p className="font-black uppercase tracking-widest text-sm">Database Setup Needed</p>
-                                                <p className="text-xs text-oxford/30 mt-1">See SUBMISSIONS_SETUP.md for instructions</p>
+                                                <p className="text-xs text-oxford/30 mt-1">Contact administrator for assistance</p>
                                             </div>
                                         </div>
                                     ) : (

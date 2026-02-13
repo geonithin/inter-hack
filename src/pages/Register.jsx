@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Users, Trash2, PlusCircle, CheckCircle2 } from 'lucide-react';
-import { cn, getSupabaseErrorMessage, ensureProfile } from '../lib/utils';
+import { UserPlus, Users, Trash2, CheckCircle2 } from 'lucide-react';
+import { getSupabaseErrorMessage, ensureProfile } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
 export default function Register() {
@@ -12,7 +12,7 @@ export default function Register() {
         year: '',
         section: '',
     });
-    const [teamSize, setTeamSize] = useState(2);
+    // Fixed team size - no more than 2 members allowed (1 lead + 1 member)
 
     const [leadData, setLeadData] = useState({
         name: '',
@@ -48,39 +48,14 @@ export default function Register() {
         checkUser();
     }, []);
 
-    // Auto-populate members array when team size changes
+    // Initialize exactly 1 member (since team size is fixed at 2)
     useEffect(() => {
-        const numMembersNeeded = teamSize - 1;
-        if (members.length !== numMembersNeeded) {
-            const newMembers = Array.from({ length: numMembersNeeded }, (_, i) =>
-                members[i] || { name: '', registerNumber: '', email: '', phone: '', department: '', year: '', section: '' }
-            );
-            setMembers(newMembers);
+        if (members.length === 0) {
+            setMembers([{ name: '', registerNumber: '', email: '', phone: '', department: '', year: '', section: '' }]);
         }
-    }, [teamSize]);
+    }, [members.length]);
 
-    const handleGoogleAuth = async () => {
-        setIsLoading(true);
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `${window.location.origin}/register`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'select_account'
-                    },
-                    scopes: 'email profile'
-                }
-            });
-            if (error) throw error;
-        } catch (error) {
-            console.error('Google Auth Error:', error);
-            alert(`Google Authentication failed: ${error.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -298,19 +273,6 @@ export default function Register() {
                                         <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Section</label>
                                         <input required value={teamData.section} onChange={(e) => setTeamData({ ...teamData, section: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base" placeholder="e.g. A, B, C" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Total Team Size</label>
-                                        <select
-                                            required
-                                            value={teamSize}
-                                            onChange={(e) => setTeamSize(parseInt(e.target.value))}
-                                            className="w-full p-3 sm:p-4 border-2 border-emerald-200 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base bg-emerald-50/50"
-                                        >
-                                            {[2, 3, 4, 5].map(size => (
-                                                <option key={size} value={size}>{size} Members (Lead + {size - 1} Others)</option>
-                                            ))}
-                                        </select>
-                                    </div>
                                 </div>
                             </div>
 
@@ -325,37 +287,36 @@ export default function Register() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs sm:text-sm font-black text-oxford uppercase tracking-widest pl-1">Lead Register No</label>
-                                        <input required value={leadData.registerNumber} onChange={(e) => setLeadData({ ...leadData, registerNumber: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm sm:text-base" placeholder="unique ID" />
+                                        <input required value={leadData.registerNumber} onChange={(e) => setLeadData({ ...leadData, registerNumber: e.target.value })} className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm sm:text-base" placeholder="Enter your register number" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Lead Email</label>
-                                        <input type="email" required value={leadData.email} onChange={(e) => setLeadData({ ...leadData, email: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="lead@college.edu" />
+                                        <input type="email" required value={leadData.email} onChange={(e) => setLeadData({ ...leadData, email: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="Enter your email" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Lead Phone</label>
-                                        <input required value={leadData.phone} onChange={(e) => setLeadData({ ...leadData, phone: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="+91 00000" />
+                                        <input required value={leadData.phone} onChange={(e) => setLeadData({ ...leadData, phone: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="+91 0000000000" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Password</label>
-                                        <input type="password" required value={leadData.password} onChange={(e) => setLeadData({ ...leadData, password: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="••••••••" />
+                                        <input type="password" required value={leadData.password} onChange={(e) => setLeadData({ ...leadData, password: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="Enter 6 digit password" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Confirm Password</label>
-                                        <input type="password" required value={leadData.confirmPassword} onChange={(e) => setLeadData({ ...leadData, confirmPassword: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="••••••••" />
+                                        <input type="password" required value={leadData.confirmPassword} onChange={(e) => setLeadData({ ...leadData, confirmPassword: e.target.value })} className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none bg-white font-bold text-sm" placeholder="Confirm Password" />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Team Members Section */}
-                            {members.length > 0 && (
-                                <div className="space-y-6 bg-oxford/5 p-6 rounded-2xl border-2 border-oxford/10">
-                                    <h3 className="text-lg font-bold text-oxford uppercase border-b-2 border-oxford/10 pb-2 flex items-center gap-2">
-                                        <Users className="w-5 h-5" /> Other Team Members
-                                    </h3>
-                                    <div className="space-y-6">
-                                        {members.map((member, idx) => (
-                                            <div key={idx} className="space-y-4 p-6 bg-white rounded-xl border-2 border-oxford/10">
-                                                <h4 className="text-sm font-black text-oxford uppercase tracking-widest">Member {idx + 2}</h4>
+                            {/* Team Member Section */}
+                            <div className="space-y-6 bg-oxford/5 p-6 rounded-2xl border-2 border-oxford/10">
+                                <h3 className="text-lg font-bold text-oxford uppercase border-b-2 border-oxford/10 pb-2 flex items-center gap-2">
+                                    <Users className="w-5 h-5" /> Team Member
+                                </h3>
+                                <div className="space-y-6">
+                                    {members.slice(0, 1).map((member, idx) => (
+                                        <div key={idx} className="space-y-4 p-6 bg-white rounded-xl border-2 border-oxford/10">
+                                            <h4 className="text-sm font-black text-oxford uppercase tracking-widest">Member 2</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Full Name</label>
@@ -374,7 +335,7 @@ export default function Register() {
                                                             value={member.registerNumber}
                                                             onChange={(e) => handleMemberChange(idx, 'registerNumber', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
-                                                            placeholder="Unique ID"
+                                                            placeholder="Enter your register number"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -385,7 +346,7 @@ export default function Register() {
                                                             value={member.email}
                                                             onChange={(e) => handleMemberChange(idx, 'email', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
-                                                            placeholder="email@college.edu"
+                                                            placeholder="Enter your email here"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -395,7 +356,7 @@ export default function Register() {
                                                             value={member.phone}
                                                             onChange={(e) => handleMemberChange(idx, 'phone', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
-                                                            placeholder="+91 00000"
+                                                            placeholder="+91 0000000000"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -432,10 +393,9 @@ export default function Register() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
 
                             <div className="flex justify-end pt-4">
                                 <button

@@ -1,4 +1,5 @@
-import { X, Bell, Info, CheckCircle, AlertTriangle, XCircle, Trash2, Check, Send, Users, FileText, TrendingUp, Clock, Zap, Calendar, Filter, History } from 'lucide-react';
+import React from 'react';
+import { X, Bell, Info, CheckCircle, AlertTriangle, XCircle, Trash2, Send, MessageCircle, Target, Clock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -17,38 +18,141 @@ export default function NotificationCenter({
     const [unreadCount, setUnreadCount] = useState(propUnreadCount);
     
     // Faculty notification states
-    const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
     const [sendingNotification, setSendingNotification] = useState(false);
-    const [showBroadcastHistory, setShowBroadcastHistory] = useState(false);
-    const [broadcastHistory, setBroadcastHistory] = useState([]);
+    const [sentNotifications, setSentNotifications] = useState([]);
     const [notificationForm, setNotificationForm] = useState({
         title: '',
         message: '',
         type: 'info',
-        category: 'announcement',
         priority: 'normal',
         recipient_filter: 'all',
         specific_teams: [],
-        department: 'CS',
-        expires_in_days: null
+        department: 'CS'
     });
     const [teams, setTeams] = useState([]);
-    const [templates, setTemplates] = useState([]);
 
-    // Update local state when props change
+    // Check if user is faculty
+    const isFaculty = getUserRole() === 'faculty';
+
+    // Update local state when props change (only for non-faculty)
     useEffect(() => {
-        setNotifications(propNotifications);
-        setUnreadCount(propUnreadCount);
-    }, [propNotifications, propUnreadCount]);
+        if (!isFaculty) {
+            setNotifications(propNotifications);
+            setUnreadCount(propUnreadCount);
+        }
+    }, [propNotifications, propUnreadCount, isFaculty]);
 
-    const icons = {
-        success: <CheckCircle className="w-4 h-4 text-green-500" />,
-        warning: <AlertTriangle className="w-4 h-4 text-amber-500" />,
-        info: <Info className="w-4 h-4 text-oxford" />,
-        error: <XCircle className="w-4 h-4 text-red-500" />,
+    // Faculty: Fetch teams for sending notifications
+    useEffect(() => {
+        if (isFaculty && isOpen) {
+            fetchTeams();
+        }
+    }, [isFaculty, isOpen]);
+
+    // Non-Faculty: Fetch notifications
+    useEffect(() => {
+        if (!isFaculty && isOpen) {
+            fetchNotifications();
+        }
+    }, [isOpen, isFaculty]);
+
+    // Faculty: Fetch teams for message sending
+    const fetchTeams = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('teams')
+                .select('id, name, lead_id, department')
+                .order('name');
+            
+            if (error) {
+                if (error.code !== '42501') {
+                    console.warn('Could not fetch teams:', error.message);
+                }
+                return;
+            }
+            setTeams(data || []);
+        } catch (error) {
+            console.warn('Error fetching teams:', error.message);
+        }
     };
 
-    // Fetch notifications from Supabase
+    // Faculty: Send notification to teams
+    const handleSendNotification = async (e) => {
+        e.preventDefault();
+        if (!notificationForm.title || !notificationForm.message) {
+            return;
+        }
+
+        setSendingNotification(true);
+        try {
+            let recipientIds = [];
+            
+            // Determine recipients based on filter
+            if (notificationForm.recipient_filter === 'all') {
+                recipientIds = teams.map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'selected') {
+                recipientIds = teams.filter(t => t.status === 'Selected').map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'pending') {
+                recipientIds = teams.filter(t => t.status === 'Pending').map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'department') {
+                recipientIds = teams.filter(t => t.department === notificationForm.department).map(t => t.lead_id).filter(Boolean);
+            }
+
+            if (recipientIds.length === 0) {
+                setSendingNotification(false);
+                return;
+            }
+
+            // Send to each recipient
+            const notifications = recipientIds.map(recipientId => ({
+                title: notificationForm.title,
+                message: notificationForm.message,
+                type: notificationForm.type,
+                priority: notificationForm.priority,
+                recipient_id: recipientId,
+                sender_type: 'faculty',
+                sender_id: user.id,
+                created_at: new Date().toISOString(),
+                is_read: false
+            }));
+
+            const { error } = await supabase
+                .from('notifications')
+                .insert(notifications);
+
+            if (error) throw error;
+
+            // Track sent notification locally
+            const sentNotification = {
+                id: Date.now(),
+                title: notificationForm.title,
+                message: notificationForm.message,
+                type: notificationForm.type,
+                recipient_count: recipientIds.length,
+                sent_at: new Date().toISOString(),
+                filter_type: notificationForm.recipient_filter
+            };
+
+            setSentNotifications(prev => [sentNotification, ...prev]);
+            
+            // Reset form
+            setNotificationForm({
+                title: '',
+                message: '',
+                type: 'info',
+                priority: 'normal',
+                recipient_filter: 'all',
+                specific_teams: [],
+                department: 'CS'
+            });
+        } catch (error) {
+            console.error('Error sending notification:', error);
+        } finally {
+            setSendingNotification(false);
+        }
+    };
+
+    // Non-Faculty: Fetch notifications from Supabase
     const fetchNotifications = async () => {
         if (!user?.id) return;
         
@@ -74,7 +178,6 @@ export default function NotificationCenter({
                 .limit(20);
 
             if (error) {
-                // Only show errors that aren't expected permission issues
                 if (!error.message?.includes('relation') && !error.message?.includes('permission')) {
                     console.error('NotificationCenter: Error fetching notifications:', error);
                 }
@@ -97,116 +200,89 @@ export default function NotificationCenter({
                 onNotificationUpdate(formattedNotifications, newUnreadCount);
             }
         } catch (error) {
-            // Suppress expected errors in production
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('NotificationCenter: Could not fetch notifications');
-            }
+            console.warn('NotificationCenter: Could not fetch notifications:', error.message);
+            setNotifications([]);
+            setUnreadCount(0);
         } finally {
             setLoading(false);
         }
     };
 
-    // Format time ago
-    const formatTimeAgo = (date) => {
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString();
-    };
-
-    // Mark notification as read
+    // Non-Faculty: Mark notification as read
     const markAsRead = async (notificationId) => {
         if (!user?.id) return;
         
         try {
-            console.log('Marking notification as read:', notificationId);
             const { error } = await supabase
                 .from('notifications')
-                .update({ 
-                    is_read: true,
-                    read_at: new Date().toISOString()
-                })
+                .update({ is_read: true })
                 .eq('id', notificationId)
                 .eq('recipient_id', user.id.toString());
 
             if (error) throw error;
 
             const updatedNotifications = notifications.map(n => 
-                n.id === notificationId 
-                    ? { ...n, is_read: true }
-                    : n
+                n.id === notificationId ? { ...n, is_read: true } : n
             );
-            const newUnreadCount = Math.max(0, unreadCount - 1);
-
+            
             setNotifications(updatedNotifications);
+            
+            // Calculate new unread count
+            const newUnreadCount = Math.max(0, unreadCount - 1);
             setUnreadCount(newUnreadCount);
             
-            // Update parent component
+            // Update parent component with correct unread count
             if (onNotificationUpdate) {
                 onNotificationUpdate(updatedNotifications, newUnreadCount);
             }
-
-            // Broadcast to all components that notifications have been updated
-            window.dispatchEvent(new CustomEvent('notificationUpdate', { 
-                detail: { unreadCount: newUnreadCount } 
+            
+            // Emit global event for other components
+            window.dispatchEvent(new CustomEvent('notificationUpdate', {
+                detail: { unreadCount: newUnreadCount }
             }));
-
-            console.log('Notification marked as read, new unread count:', newUnreadCount);
+            
         } catch (error) {
             console.error('Error marking notification as read:', error);
         }
     };
 
-    // Mark all as read
+    // Non-Faculty: Mark all notifications as read
     const markAllAsRead = async () => {
-        if (!user?.id) return;
+        if (!user?.id || notifications.length === 0) return;
+        
+        const unreadNotificationIds = notifications.filter(n => !n.is_read).map(n => n.id);
+        if (unreadNotificationIds.length === 0) return;
         
         try {
-            const unreadNotifications = notifications.filter(n => !n.is_read);
-            if (unreadNotifications.length === 0) return;
-
-            console.log('Marking all notifications as read');
             const { error } = await supabase
                 .from('notifications')
-                .update({ 
-                    is_read: true,
-                    read_at: new Date().toISOString()
-                })
+                .update({ is_read: true })
                 .eq('recipient_id', user.id.toString())
-                .eq('is_read', false);
+                .in('id', unreadNotificationIds);
 
             if (error) throw error;
 
+            // Update local state
             const updatedNotifications = notifications.map(n => ({ ...n, is_read: true }));
-            const newUnreadCount = 0;
-
             setNotifications(updatedNotifications);
-            setUnreadCount(newUnreadCount);
+            setUnreadCount(0);
             
             // Update parent component
             if (onNotificationUpdate) {
-                onNotificationUpdate(updatedNotifications, newUnreadCount);
+                onNotificationUpdate(updatedNotifications, 0);
             }
-
-            // Broadcast to all components that notifications have been updated
-            window.dispatchEvent(new CustomEvent('notificationUpdate', { 
-                detail: { unreadCount: newUnreadCount } 
+            
+            // Emit global event for other components
+            window.dispatchEvent(new CustomEvent('notificationUpdate', {
+                detail: { unreadCount: 0 }
             }));
-
-            console.log('All notifications marked as read');
+            
         } catch (error) {
             console.error('Error marking all notifications as read:', error);
         }
     };
 
-    // Delete notification
+    // Non-Faculty: Delete notification
     const deleteNotification = async (notificationId) => {
         if (!user?.id) return;
         
@@ -238,715 +314,416 @@ export default function NotificationCenter({
         }
     };
 
-    // Faculty notification functions
-    const fetchTeams = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('teams')
-                .select('id, name, lead_id, department')
-                .order('name');
-            
-            if (error) {
-                if (error.code !== '42501') {
-                    console.warn('Could not fetch teams:', error.message);
-                }
-                return;
-            }
-            setTeams(data || []);
-        } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('Error fetching teams:', error.message);
-            }
-        }
-    };
-
-    const fetchTemplates = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('notification_templates')
-                .select('*')
-                .eq('is_active', true)
-                .order('name');
-            
-            if (error) throw error;
-            setTemplates(data || []);
-        } catch (error) {
-            console.warn('Could not fetch templates:', error.message);
-        }
-    };
-
-    const fetchBroadcastHistory = async () => {
-        if (!user?.id) return;
+    // Utility function for time formatting
+    const formatTimeAgo = (date) => {
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / 60000);
         
-        try {
-            const { data, error } = await supabase
-                .from('notification_broadcasts')
-                .select('*')
-                .eq('sender_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(20);
-            
-            if (error) throw error;
-            setBroadcastHistory(data || []);
-        } catch (error) {
-            console.warn('Could not fetch broadcast history:', error.message);
-        }
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+        return `${Math.floor(diffInMinutes / 1440)}d ago`;
     };
 
-    const sendNotificationToTeams = async (e) => {
-        e.preventDefault();
-        
-        try {
-            setSendingNotification(true);
-
-            // Use the database function for sending bulk notifications
-            const { data, error } = await supabase.rpc('send_bulk_notification', {
-                p_title: notificationForm.title.trim(),
-                p_message: notificationForm.message.trim(),
-                p_type: notificationForm.type,
-                p_category: notificationForm.category,
-                p_priority: notificationForm.priority,
-                p_recipient_filter: notificationForm.recipient_filter,
-                p_department: notificationForm.recipient_filter === 'department' ? notificationForm.department : null,
-                p_team_ids: notificationForm.recipient_filter === 'specific' ? notificationForm.specific_teams : [],
-                p_sender_id: user.id,
-                p_expires_in_days: notificationForm.expires_in_days
-            });
-
-            if (error) throw error;
-
-            console.log('Notification sent successfully:', data);
-            
-            // Show success message
-            alert(`✅ Successfully sent ${data.notifications_sent} notification${data.notifications_sent !== 1 ? 's' : ''}!`);
-
-            // Refresh notifications and broadcast history
-            await fetchNotifications();
-            await fetchBroadcastHistory();
-            
-            // Reset form and close modal
-            setNotificationForm({
-                title: '',
-                message: '',
-                type: 'info',
-                category: 'announcement',
-                priority: 'normal',
-                recipient_filter: 'all',
-                specific_teams: [],
-                department: 'CS',
-                expires_in_days: null
-            });
-            setIsNotificationModalOpen(false);
-            
-        } catch (error) {
-            console.error('Error sending notification:', error);
-            alert(`❌ Error: ${error.message}`);
-        } finally {
-            setSendingNotification(false);
-        }
+    const icons = {
+        success: <CheckCircle className="w-4 h-4 text-green-500" />,
+        warning: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+        info: <Info className="w-4 h-4 text-oxford" />,
+        error: <XCircle className="w-4 h-4 text-red-500" />,
     };
-
-    const applyTemplate = (template) => {
-        setNotificationForm({
-            ...notificationForm,
-            title: template.title,
-            message: template.message,
-            type: template.type,
-            category: template.category,
-            priority: template.priority
-        });
-    };
-
-    // Set up real-time subscription with better connection management
-    useEffect(() => {
-        if (!user?.id) return;
-
-        fetchNotifications();
-        
-        // Fetch teams, templates and broadcast history if user is faculty
-        if (getUserRole() === 'faculty') {
-            fetchTeams();
-            fetchTemplates();
-            fetchBroadcastHistory();
-        }
-
-        // Only set up subscription if not already established globally
-        let channel = null;
-        let isSubscribed = false;
-        
-        if (!window.notificationChannel && user?.id) {
-            console.log('Setting up notification subscription for user:', user.id);
-            
-            const channelName = `notifications_${user.id}`;
-            channel = supabase.channel(channelName);
-            
-            channel
-                .on('postgres_changes', 
-                    { 
-                        event: 'INSERT', 
-                        schema: 'public', 
-                        table: 'notifications',
-                        filter: `recipient_id=eq.${user.id.toString()}`
-                    }, 
-                    (payload) => {
-                        console.log('New notification received:', payload);
-                        const newNotification = {
-                            ...payload.new,
-                            time: 'Just now'
-                        };
-                        
-                        setNotifications(prev => [newNotification, ...prev]);
-                        
-                        if (!newNotification.is_read) {
-                            setUnreadCount(prev => prev + 1);
-                        }
-                        
-                        // Trigger refresh to sync with parent
-                        setTimeout(fetchNotifications, 500);
-                    }
-                )
-                .subscribe((status, error) => {
-                    console.log('Subscription status:', status);
-                    if (error) {
-                        console.error('Subscription error:', error);
-                    }
-                    
-                    if (status === 'SUBSCRIBED') {
-                        isSubscribed = true;
-                        console.log('✅ Notifications realtime connected');
-                    } else if (status === 'CHANNEL_ERROR') {
-                        // Silently handle channel errors - they're expected if subscriptions aren't enabled
-                        if (process.env.NODE_ENV === 'development') {
-                            console.log('Channel connection unavailable (this is normal)');
-                        }
-                        // Don't retry on channel errors to prevent infinite loops
-                        if (channel) {
-                            try {
-                                supabase.removeChannel(channel);
-                            } catch (e) {
-                                // Silently ignore cleanup errors
-                            }
-                            window.notificationChannel = null;
-                        }
-                    }
-                });
-                
-            window.notificationChannel = channel;
-        }
-
-        return () => {
-            // Safer cleanup with error handling and status checks
-            if (channel && isSubscribed) {
-                try {
-                    console.log('Cleaning up notification channel');
-                    supabase.removeChannel(channel);
-                } catch (error) {
-                    console.log('Channel cleanup error (safe to ignore):', error.message);
-                }
-                
-                if (window.notificationChannel === channel) {
-                    window.notificationChannel = null;
-                }
-                isSubscribed = false;
-            }
-        };
-    }, [user]);
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-y-0 right-0 w-70 sm:w-80 bg-white shadow-2xl z-60 border-l-4 border-oxford flex flex-col animate-in slide-in-from-right duration-300">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-oxford to-oxford-dark text-white px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                    <div className="relative p-2 bg-white/10 rounded-lg">
-                        <Bell className="w-5 h-5" />
-                        {unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">
-                                {unreadCount > 9 ? '9+' : unreadCount}
+    // Faculty users get a completely different interface focused on sending messages
+    if (isFaculty) {
+        return (
+            <div className="fixed top-16 sm:inset-y-0 right-2 sm:right-0 w-80 sm:w-96 md:w-[28rem] max-h-[calc(100vh-5rem)] sm:max-h-none bg-white shadow-xl border border-gray-200 rounded-xl sm:rounded-l-none sm:border-l z-50 flex flex-col">
+                {/* Professional Faculty Header */}
+                <div className="bg-white border-b border-gray-200">
+                    <div className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-oxford/10 rounded-lg flex items-center justify-center">
+                                    <MessageCircle className="w-5 h-5 text-oxford" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">Send Message</h2>
+                                    <p className="text-sm text-gray-500">Broadcast to Teams</p>
+                                </div>
                             </div>
-                        )}
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black uppercase tracking-tight leading-none">
-                            Notifications
-                        </h2>
-                        {unreadCount > 0 && (
-                            <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-0.5">
-                                {unreadCount} unread
-                            </p>
-                        )}
+                            <button 
+                                onClick={onClose} 
+                                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+                            >
+                                <X className="w-4 h-4 text-gray-600" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-                    <X className="w-5 h-5" />
-                </button>
-            </div>
 
-            {/* Faculty Send Notification Section */}
-            {getUserRole() === 'faculty' && (
-                <div className="bg-gradient-to-br from-oxford/5 via-oxford/3 to-transparent border-b border-oxford/10 p-5">
+                {/* Professional Message Composer */}
+                <form onSubmit={handleSendNotification} className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
+                    {/* Message Title Card */}
+                    <div className="bg-gray-50 rounded-xl p-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Message Title *
+                        </label>
+                        <input
+                            type="text"
+                            value={notificationForm.title}
+                            onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Enter announcement title..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
+                            required
+                        />
+                    </div>
+
+                    {/* Message Content Card */}
+                    <div className="bg-gray-50 rounded-xl p-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Message Content *
+                        </label>
+                        <textarea
+                            value={notificationForm.message}
+                            onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
+                            placeholder="Write your message here..."
+                            rows={4}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all resize-none"
+                            required
+                        />
+                    </div>
+
+                    {/* Configuration Cards */}
                     <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-oxford to-oxford-dark rounded-xl shadow-lg">
-                                <Users className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-black text-oxford uppercase tracking-wider">Faculty Portal</p>
-                                <p className="text-[9px] text-oxford/50 font-bold">Broadcast to teams</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                onClick={() => setIsNotificationModalOpen(true)}
-                                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-oxford to-oxford-dark text-white rounded-xl font-black text-[10px] uppercase tracking-wider hover:shadow-lg active:scale-95 transition-all"
+                        <div className="bg-gray-50 rounded-xl p-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Message Type
+                            </label>
+                            <select
+                                value={notificationForm.type}
+                                onChange={(e) => setNotificationForm(prev => ({ ...prev, type: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
                             >
-                                <Send className="w-3.5 h-3.5" />
-                                Send
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowBroadcastHistory(!showBroadcastHistory);
-                                    if (!showBroadcastHistory) fetchBroadcastHistory();
-                                }}
-                                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-oxford/20 text-oxford rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-oxford/5 active:scale-95 transition-all"
-                            >
-                                <History className="w-3.5 h-3.5" />
-                                History
-                            </button>
+                                <option value="info">Information</option>
+                                <option value="success">Success</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Important</option>
+                            </select>
                         </div>
-                        {showBroadcastHistory && broadcastHistory.length > 0 && (
-                            <div className="mt-3 p-3 bg-white rounded-xl border border-oxford/10 max-h-48 overflow-y-auto space-y-2">
-                                {broadcastHistory.slice(0, 5).map((broadcast) => (
-                                    <div key={broadcast.id} className="p-2.5 bg-oxford/5 rounded-lg border border-oxford/10">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black text-oxford truncate">{broadcast.title}</p>
-                                                <p className="text-[8px] text-oxford/60 font-bold mt-0.5">{broadcast.message.substring(0, 50)}{broadcast.message.length > 50 ? '...' : ''}</p>
-                                            </div>
-                                            <div className="flex-shrink-0 text-right">
-                                                <span className="inline-block px-2 py-0.5 bg-oxford text-white rounded text-[8px] font-black">
-                                                    {broadcast.recipient_count}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[7px] font-black text-oxford/40 uppercase tracking-wider">{new Date(broadcast.created_at).toLocaleDateString()}</span>
-                                            <span className="text-[7px] font-bold text-oxford/40">•</span>
-                                            <span className="text-[7px] font-black text-oxford/40 uppercase">{broadcast.recipient_filter}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
 
-            {/* Notifications List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-oxford/40">
-                        <div className="w-10 h-10 border-4 border-oxford/20 border-t-oxford rounded-full animate-spin mb-4" />
-                        <p className="font-black uppercase text-[10px] tracking-widest">Loading...</p>
-                        <p className="text-[8px] text-oxford/20 mt-1">Fetching notifications</p>
-                    </div>
-                ) : notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-oxford/30">
-                        <div className="p-6 bg-oxford/5 rounded-2xl mb-4">
-                            <Bell className="w-12 h-12 text-oxford/20" />
+                        <div className="bg-gray-50 rounded-xl p-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Priority Level
+                            </label>
+                            <select
+                                value={notificationForm.priority}
+                                onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
+                            >
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
                         </div>
-                        <p className="font-black uppercase text-[11px] tracking-widest mb-1">No Notifications</p>
-                        <p className="text-[9px] text-oxford/20 font-bold">All caught up! Great work.</p>
+
+                        <div className="bg-gray-50 rounded-xl p-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Recipients
+                            </label>
+                            <select
+                                value={notificationForm.recipient_filter}
+                                onChange={(e) => setNotificationForm(prev => ({ ...prev, recipient_filter: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
+                            >
+                                <option value="all">All Teams</option>
+                                <option value="selected">Selected Teams Only</option>
+                                <option value="pending">Pending Teams Only</option>
+                                <option value="department">By Department</option>
+                            </select>
+                        </div>
                     </div>
-                ) : (
-                    notifications.map((n) => (
-                        <div 
-                            key={n.id} 
+
+                    {/* Department Filter */}
+                    {notificationForm.recipient_filter === 'department' && (
+                        <div className="bg-gray-50 rounded-xl p-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Department
+                            </label>
+                            <select
+                                value={notificationForm.department}
+                                onChange={(e) => setNotificationForm(prev => ({ ...prev, department: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
+                            >
+                                <option value="CS">Computer Science</option>
+                                <option value="EC">Electronics</option>
+                                <option value="ME">Mechanical</option>
+                                <option value="CE">Civil</option>
+                                <option value="EE">Electrical</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Recipient Info Card */}
+                    <div className="bg-oxford/5 rounded-xl p-4 border border-oxford/10">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-oxford/10 rounded-lg flex items-center justify-center">
+                                <Target className="w-4 h-4 text-oxford" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-oxford">
+                                    Will notify: {teams.length} team{teams.length !== 1 ? 's' : ''}
+                                </p>
+                                <p className="text-xs text-oxford/60">Recipients will be notified immediately</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Send Button Card */}
+                    <div className="bg-gray-50 rounded-xl p-4">
+                        <button
+                            type="submit"
+                            disabled={sendingNotification || !notificationForm.title || !notificationForm.message}
                             className={cn(
-                                "p-4 border-2 rounded-xl transition-all group cursor-pointer",
-                                n.is_read 
-                                    ? "border-oxford/10 bg-oxford/2 hover:border-oxford/20" 
-                                    : "border-oxford/20 bg-white shadow-md hover:border-oxford/40 hover:shadow-lg"
+                                "w-full py-3 bg-oxford text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2",
+                                sendingNotification || !notificationForm.title || !notificationForm.message 
+                                    ? "opacity-50 cursor-not-allowed" 
+                                    : "hover:bg-oxford-dark"
                             )}
-                            onClick={() => !n.is_read && markAsRead(n.id)}
                         >
-                            <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-3 flex-1">
-                                    <div className={cn(
-                                        "p-1.5 rounded-lg",
-                                        n.is_read ? "bg-oxford/10" : "bg-oxford/15"
-                                    )}>
-                                        {icons[n.type]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className={cn(
-                                            "font-black uppercase text-[11px] leading-tight tracking-tight truncate",
-                                            n.is_read ? "text-oxford/60" : "text-oxford"
+                            {sendingNotification ? (
+                                <>
+                                    <Clock className="w-5 h-5 animate-spin" />
+                                    Sending...
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="w-5 h-5" />
+                                    Send Message
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+
+                {/* Sent Messages History */}
+                {sentNotifications.length > 0 && (
+                    <div className="border-t border-gray-200 p-4 max-h-64 overflow-y-auto">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Recent Messages</h4>
+                        <div className="space-y-2">
+                            {sentNotifications.slice(0, 5).map((sentMsg) => (
+                                <div key={sentMsg.id} className="bg-gray-50 rounded-lg p-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                            <h5 className="font-semibold text-sm text-gray-900 mb-1">{sentMsg.title}</h5>
+                                            <p className="text-xs text-gray-600 line-clamp-2">{sentMsg.message}</p>
+                                            <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                                <span>{sentMsg.recipient_count} recipients</span>
+                                                <span>•</span>
+                                                <span>{new Date(sentMsg.sent_at).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                        <div className={cn(
+                                            "px-2 py-1 rounded text-xs font-medium",
+                                            sentMsg.type === 'success' ? "bg-green-100 text-green-700" :
+                                            sentMsg.type === 'warning' ? "bg-amber-100 text-amber-700" :
+                                            sentMsg.type === 'error' ? "bg-red-100 text-red-700" :
+                                            "bg-blue-100 text-blue-700"
                                         )}>
-                                            {n.title}
-                                        </h4>
-                                        {n.sender_type && (
-                                            <span className="inline-block mt-1 text-[8px] font-black uppercase bg-oxford/10 px-2 py-0.5 rounded text-oxford/50 tracking-wide">
-                                                {n.sender_type}
-                                            </span>
-                                        )}
+                                            {sentMsg.type}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-2">
-                                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-oxford animate-pulse" />}
-                                    {!n.is_read && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                markAsRead(n.id);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-green-50 hover:text-green-600 rounded-lg transition-all"
-                                            title="Mark as read"
-                                        >
-                                            <Check className="w-3 h-3" />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteNotification(n.id);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
-                                        title="Delete notification"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                            <p className={cn(
-                                "text-[10px] leading-relaxed font-bold pl-8",
-                                n.is_read ? "text-oxford/50" : "text-oxford/70"
-                            )}>
-                                {n.message}
-                            </p>
-                            <div className="flex justify-between items-center mt-3 pl-8">
-                                <p className="text-[8px] font-black text-oxford/30 uppercase tracking-widest">{n.time}</p>
-                            </div>
+                            ))}
                         </div>
-                    ))
+                    </div>
                 )}
             </div>
+        );
+    }
 
-            {/* Footer Actions */}
-            <div className="p-4 bg-oxford/3 border-t border-oxford/10 space-y-3">
-                <button 
-                    onClick={markAllAsRead}
-                    disabled={unreadCount === 0}
-                    className={cn(
-                        "w-full py-3.5 border-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-sm active:scale-95",
-                        unreadCount > 0 
-                            ? "border-oxford/20 bg-white text-oxford hover:bg-oxford hover:text-white hover:border-oxford" 
-                            : "border-oxford/5 bg-oxford/5 text-oxford/30 cursor-not-allowed"
-                    )}
-                >
-                    Mark All Read ({unreadCount})
-                </button>
-                <div className="text-center">
-                    <button
-                        onClick={fetchNotifications}
-                        className="text-[9px] font-black uppercase text-oxford/50 hover:text-oxford transition-colors tracking-widest px-3 py-1.5 rounded-lg hover:bg-oxford/5"
-                    >
-                        Refresh Notifications
-                    </button>
+    // Original notification receiving interface for team leads
+    return (
+        <div className="fixed top-16 sm:inset-y-0 right-2 sm:right-0 w-80 sm:w-96 md:w-[28rem] max-h-[calc(100vh-5rem)] sm:max-h-none bg-white shadow-xl border border-gray-200 rounded-xl sm:rounded-l-none sm:border-l z-50 flex flex-col">
+            {/* Professional Header with Card Layout */}
+            <div className="bg-white border-b border-gray-200">
+                <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                            <div className="relative">
+                                <div className="w-10 h-10 bg-oxford/10 rounded-lg flex items-center justify-center">
+                                    <Bell className="w-5 h-5 text-oxford" />
+                                </div>
+                                {unreadCount > 0 && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                        <span className="text-xs font-bold text-white">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
+                                <p className="text-sm text-gray-500">
+                                    {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            onClick={onClose} 
+                            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+                        >
+                            <X className="w-4 h-4 text-gray-600" />
+                        </button>
+                    </div>
+                    
+                    {/* Action Cards */}
+                    <div className="flex space-x-2">
+                        {unreadCount > 0 && (
+                            <div className="bg-oxford/5 rounded-lg p-3 flex-1">
+                                <button 
+                                    onClick={markAllAsRead}
+                                    className="w-full flex items-center justify-center space-x-2 py-2 bg-oxford hover:bg-oxford-dark text-white rounded-md transition-colors text-sm font-medium"
+                                >
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span>Mark all read</span>
+                                </button>
+                            </div>
+                        )}
+                        
+                        <div className="bg-gray-50 rounded-lg p-3 flex-1">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-gray-600">Total</span>
+                                <span className="text-sm font-bold text-gray-900">{notifications.length}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                                <span className="text-xs font-medium text-gray-600">Unread</span>
+                                <span className="text-sm font-bold text-red-600">{unreadCount}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Faculty Notification Modal - Complete Redesign */}
-            {isNotificationModalOpen && getUserRole() === 'faculty' && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-gradient-to-br from-oxford/60 via-oxford/40 to-oxford/60 backdrop-blur-md animate-in fade-in">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl border-2 border-oxford/20 animate-in zoom-in-95 duration-300">
-                        {/* Header */}
-                        <div className="relative bg-gradient-to-r from-oxford via-oxford-dark to-oxford p-6 text-white overflow-hidden">
-                            <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-                            <div className="relative flex items-start justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl shadow-lg">
-                                        <Send className="w-7 h-7" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-black uppercase tracking-tight leading-none">Broadcast Notification</h3>
-                                        <p className="text-xs font-bold opacity-90 mt-1.5 flex items-center gap-2">
-                                            <TrendingUp className="w-3.5 h-3.5" />
-                                            Send updates to teams instantly
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setIsNotificationModalOpen(false)}
-                                    className="p-2 hover:bg-white/20 rounded-xl transition-all"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <form onSubmit={sendNotificationToTeams} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-                            <div className="p-6 space-y-5">
-                                {/* Quick Templates */}
-                                {templates.length > 0 && (
-                                    <div className="bg-gradient-to-br from-oxford/5 to-oxford/10 p-4 rounded-2xl border border-oxford/10">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Zap className="w-4 h-4 text-oxford" />
-                                            <label className="text-[10px] font-black text-oxford uppercase tracking-wider">Quick Templates</label>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {templates.slice(0, 4).map((template) => (
-                                                <button
-                                                    key={template.id}
-                                                    type="button"
-                                                    onClick={() => applyTemplate(template)}
-                                                    className="p-3 bg-white border border-oxford/10 rounded-xl text-left hover:border-oxford hover:bg-oxford/5 transition-all group"
-                                                >
-                                                    <p className="text-[10px] font-black text-oxford uppercase leading-tight group-hover:text-oxford-dark">{template.name.replace(/_/g, ' ')}</p>
-                                                    <p className="text-[8px] text-oxford/50 font-bold mt-1">{template.title.substring(0, 30)}...</p>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+            {/* Professional Notifications List */}
+            <div className="flex-1 overflow-y-auto">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-8 h-8 border-4 border-gray-300 border-t-oxford rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm text-gray-500 font-medium">Loading notifications...</p>
+                    </div>
+                ) : notifications.length > 0 ? (
+                    <div className="p-4 space-y-2">
+                        {notifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className={cn(
+                                    "bg-white border rounded-xl p-4 transition-all duration-200 cursor-pointer group hover:shadow-md",
+                                    notification.is_read 
+                                        ? "border-gray-200 hover:border-gray-300" 
+                                        : "border-l-4 border-l-oxford bg-oxford/5 border-gray-200 hover:bg-oxford/10"
                                 )}
-
-                                {/* Title */}
-                                <div>
-                                    <label className="block text-xs font-black text-oxford mb-2 uppercase tracking-wider">
-                                        Notification Title *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={notificationForm.title}
-                                        onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })}
-                                        className="w-full px-4 py-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold text-sm placeholder:text-oxford/30"
-                                        placeholder="e.g., Submission Deadline Update"
-                                        required
-                                        maxLength={100}
-                                    />
-                                    <p className="text-[9px] text-oxford/40 font-bold mt-1.5 ml-1">{notificationForm.title.length}/100 characters</p>
-                                </div>
-
-                                {/* Message */}
-                                <div>
-                                    <label className="block text-xs font-black text-oxford mb-2 uppercase tracking-wider">
-                                        Message Content *
-                                    </label>
-                                    <textarea
-                                        value={notificationForm.message}
-                                        onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })}
-                                        className="w-full px-4 py-3.5 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold resize-none text-sm placeholder:text-oxford/30"
-                                        rows="4"
-                                        placeholder="Enter your message here..."
-                                        required
-                                        maxLength={500}
-                                    />
-                                    <p className="text-[9px] text-oxford/40 font-bold mt-1.5 ml-1">{notificationForm.message.length}/500 characters</p>
-                                </div>
-
-                                {/* Type, Category, and Priority - Grid Layout */}
-                                <div className="grid grid-cols-3 gap-3">
-                                    {/* Type */}
-                                    <div>
-                                        <label className="block text-[10px] font-black text-oxford mb-2 uppercase tracking-wider">Type</label>
-                                        <select
-                                            value={notificationForm.type}
-                                            onChange={(e) => setNotificationForm({ ...notificationForm, type: e.target.value })}
-                                            className="w-full px-3 py-2.5 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold text-xs"
-                                        >
-                                            <option value="info">ℹ️ Info</option>
-                                            <option value="success">✅ Success</option>
-                                            <option value="warning">⚠️ Warning</option>
-                                            <option value="error">❌ Error</option>
-                                        </select>
-                                    </div>
-
-                                    {/* Category */}
-                                    <div>
-                                        <label className="block text-[10px] font-black text-oxford mb-2 uppercase tracking-wider">Category</label>
-                                        <select
-                                            value={notificationForm.category}
-                                            onChange={(e) => setNotificationForm({ ...notificationForm, category: e.target.value })}
-                                            className="w-full px-3 py-2.5 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold text-xs"
-                                        >
-                                            <option value="announcement">📢 Announcement</option>
-                                            <option value="deadline">⏰ Deadline</option>
-                                            <option value="update">🔄 Update</option>
-                                            <option value="reminder">🔔 Reminder</option>
-                                            <option value="alert">⚡ Alert</option>
-                                        </select>
-                                    </div>
-
-                                    {/* Priority */}
-                                    <div>
-                                        <label className="block text-[10px] font-black text-oxford mb-2 uppercase tracking-wider">Priority</label>
-                                        <select
-                                            value={notificationForm.priority}
-                                            onChange={(e) => setNotificationForm({ ...notificationForm, priority: e.target.value })}
-                                            className={cn(
-                                                "w-full px-3 py-2.5 border-2 rounded-xl focus:ring-2 transition-all font-bold text-xs",
-                                                notificationForm.priority === 'urgent' ? "border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50" :
-                                                notificationForm.priority === 'high' ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50" :
-                                                "border-oxford/10 focus:border-oxford focus:ring-oxford/20"
-                                            )}
-                                        >
-                                            <option value="low">🟢 Low</option>
-                                            <option value="normal">🔵 Normal</option>
-                                            <option value="high">🟠 High</option>
-                                            <option value="urgent">🔴 Urgent</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Recipients Section */}
-                                <div className="bg-gradient-to-br from-oxford/5 to-transparent p-4 rounded-2xl border border-oxford/10">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Filter className="w-4 h-4 text-oxford" />
-                                        <label className="text-xs font-black text-oxford uppercase tracking-wider">Target Recipients</label>
+                                onClick={() => !notification.is_read && markAsRead(notification.id)}
+                            >
+                                <div className="flex items-start space-x-3">
+                                    {/* Icon Card */}
+                                    <div className={cn(
+                                        "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+                                        notification.is_read 
+                                            ? "bg-gray-100" 
+                                            : "bg-oxford text-white"
+                                    )}>
+                                        {React.cloneElement(icons[notification.type] || icons.info, {
+                                            className: cn("w-5 h-5", notification.is_read ? "text-gray-500" : "text-white")
+                                        })}
                                     </div>
                                     
-                                    <select
-                                        value={notificationForm.recipient_filter}
-                                        onChange={(e) => setNotificationForm({ ...notificationForm, recipient_filter: e.target.value, specific_teams: [] })}
-                                        className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold text-sm mb-3"
-                                    >
-                                        <option value="all">📢 All Teams</option>
-                                        <option value="department">🏢 By Department</option>
-                                        <option value="specific">👥 Specific Teams</option>
-                                    </select>
-
-                                    {/* Department Filter */}
-                                    {notificationForm.recipient_filter === 'department' && (
-                                        <select
-                                            value={notificationForm.department}
-                                            onChange={(e) => setNotificationForm({ ...notificationForm, department: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford focus:ring-2 focus:ring-oxford/20 transition-all font-bold text-sm"
-                                        >
-                                            <option value="CS">💻 Computer Science</option>
-                                            <option value="EC">⚡ Electronics & Communication</option>
-                                            <option value="ME">⚙️ Mechanical Engineering</option>
-                                            <option value="EE">🔌 Electrical Engineering</option>
-                                            <option value="CE">🏗️ Civil Engineering</option>
-                                        </select>
-                                    )}
-
-                                    {/* Specific Teams */}
-                                    {notificationForm.recipient_filter === 'specific' && (
-                                        <div className="space-y-2 max-h-40 overflow-y-auto border-2 border-oxford/10 rounded-xl p-3 bg-white">
-                                            {teams.length === 0 ? (
-                                                <p className="text-xs text-oxford/50 font-bold text-center py-4">No teams available</p>
-                                            ) : (
-                                                teams.map((team) => (
-                                                    <label
-                                                        key={team.id}
-                                                        className={cn(
-                                                            "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all",
-                                                            notificationForm.specific_teams.includes(team.id)
-                                                                ? "bg-oxford/10 border border-oxford/30"
-                                                                : "hover:bg-oxford/5 border border-transparent"
-                                                        )}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={notificationForm.specific_teams.includes(team.id)}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setNotificationForm({
-                                                                        ...notificationForm,
-                                                                        specific_teams: [...notificationForm.specific_teams, team.id]
-                                                                    });
-                                                                } else {
-                                                                    setNotificationForm({
-                                                                        ...notificationForm,
-                                                                        specific_teams: notificationForm.specific_teams.filter(id => id !== team.id)
-                                                                    });
-                                                                }
-                                                            }}
-                                                            className="rounded border-oxford/30 text-oxford focus:ring-oxford w-4 h-4"
-                                                        />
-                                                        <div className="flex-1">
-                                                            <span className="text-sm font-bold text-oxford">{team.name}</span>
-                                                            {team.department && (
-                                                                <span className="ml-2 text-[9px] font-black px-2 py-0.5 bg-oxford/10 text-oxford/60 rounded-full uppercase">
-                                                                    {team.department}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </label>
-                                                ))
-                                            )}
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex-1">
+                                                <h3 className={cn(
+                                                    "font-semibold text-sm leading-tight mb-1",
+                                                    notification.is_read ? "text-gray-700" : "text-gray-900"
+                                                )}>
+                                                    {notification.title}
+                                                </h3>
+                                                
+                                                <div className="flex items-center space-x-2">
+                                                    {notification.sender_type === 'faculty' && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-oxford/10 text-oxford">
+                                                            Faculty
+                                                        </span>
+                                                    )}
+                                                    {!notification.is_read && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                                            New
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Action Card */}
+                                            <div className="ml-4">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteNotification(notification.id);
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 w-8 h-8 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                </button>
+                                            </div>
                                         </div>
-                                    )}
-
-                                    {/* Team Count Display */}
-                                    <div className="mt-3 p-2.5 bg-white rounded-lg border border-oxford/10">
-                                        <p className="text-[10px] font-black text-oxford/60 uppercase tracking-wider flex items-center gap-2">
-                                            <Users className="w-3.5 h-3.5" />
-                                            Will notify: <span className="text-oxford">
-                                                {notificationForm.recipient_filter === 'all' ? teams.length :
-                                                 notificationForm.recipient_filter === 'department' ? teams.filter(t => t.department === notificationForm.department).length :
-                                                 notificationForm.specific_teams.length} team{notificationForm.specific_teams.length !== 1 ? 's' : ''}
-                                            </span>
+                                        
+                                        <p className={cn(
+                                            "text-sm mb-3",
+                                            notification.is_read ? "text-gray-600" : "text-gray-700"
+                                        )}>
+                                            {notification.message}
                                         </p>
-                                    </div>
-                                </div>
-
-                                {/* Optional: Expiration */}
-                                <div className="flex items-center gap-4 p-4 bg-oxford/5 rounded-xl border border-oxford/10">
-                                    <Calendar className="w-5 h-5 text-oxford flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <label className="block text-[10px] font-black text-oxford uppercase tracking-wider mb-1.5">
-                                            Auto-delete after (optional)
-                                        </label>
-                                        <select
-                                            value={notificationForm.expires_in_days || ''}
-                                            onChange={(e) => setNotificationForm({ ...notificationForm, expires_in_days: e.target.value ? parseInt(e.target.value) : null })}
-                                            className="w-full px-3 py-2 border-2 border-oxford/10 rounded-lg focus:border-oxford transition-all font-bold text-xs"
-                                        >
-                                            <option value="">Never expire</option>
-                                            <option value="1">1 day</option>
-                                            <option value="3">3 days</option>
-                                            <option value="7">1 week</option>
-                                            <option value="30">1 month</option>
-                                        </select>
+                                        
+                                        {/* Time Card */}
+                                        <div className="bg-gray-50 rounded-lg px-3 py-1 inline-block">
+                                            <p className="text-xs text-gray-500 font-medium">
+                                                {notification.time}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Footer Actions */}
-                            <div className="sticky bottom-0 p-5 bg-gradient-to-t from-white via-white to-transparent border-t border-oxford/10">
-                                <div className="flex gap-3">
+                        ))}
+                        
+                        {/* Mobile Action Card */}
+                        {unreadCount > 0 && (
+                            <div className="pt-4 sm:hidden">
+                                <div className="bg-oxford/5 rounded-xl p-4">
                                     <button
-                                        type="button"
-                                        onClick={() => setIsNotificationModalOpen(false)}
-                                        className="flex-1 px-6 py-4 border-2 border-oxford/20 text-oxford/70 font-black rounded-xl uppercase tracking-wider text-xs hover:text-oxford hover:border-oxford hover:bg-oxford/5 transition-all"
+                                        onClick={markAllAsRead}
+                                        className="w-full bg-oxford hover:bg-oxford-dark text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors"
                                     >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={sendingNotification || (notificationForm.recipient_filter === 'specific' && notificationForm.specific_teams.length === 0)}
-                                        className="flex-1 px-6 py-4 bg-gradient-to-r from-oxford to-oxford-dark text-white font-black rounded-xl uppercase tracking-wider text-xs hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-95 flex items-center justify-center gap-2"
-                                    >
-                                        {sendingNotification ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Sending...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Send className="w-4 h-4" />
-                                                Send Notification
-                                            </>
-                                        )}
+                                        <CheckCircle className="w-5 h-5" />
+                                        <span>Mark All as Read</span>
                                     </button>
                                 </div>
                             </div>
-                        </form>
+                        )}
                     </div>
-                </div>
-            )}
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 px-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                            <Bell className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+                            <p className="text-sm text-gray-500">
+                                You're all caught up! New notifications will appear here.
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

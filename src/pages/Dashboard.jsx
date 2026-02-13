@@ -181,6 +181,71 @@ export default function Dashboard() {
         }
     };
 
+    // Mark notification as read
+    const markAsRead = async (notificationId) => {
+        if (!user?.id) return;
+        
+        try {
+            const { error } = await supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('id', notificationId)
+                .eq('recipient_id', user.id.toString());
+
+            if (error) throw error;
+
+            // Update local state immediately
+            const updatedNotifications = notifications.map(n => 
+                n.id === notificationId ? { ...n, is_read: true } : n
+            );
+            
+            setNotifications(updatedNotifications);
+            
+            // Update unread count immediately
+            const newUnreadCount = updatedNotifications.filter(n => !n.is_read).length;
+            setUnreadCount(newUnreadCount);
+            
+            // Emit global event for other components
+            window.dispatchEvent(new CustomEvent('notificationUpdate', {
+                detail: { unreadCount: newUnreadCount }
+            }));
+            
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    // Mark all notifications as read
+    const markAllAsRead = async () => {
+        if (!user?.id || notifications.length === 0) return;
+        
+        const unreadNotificationIds = notifications.filter(n => !n.is_read).map(n => n.id);
+        if (unreadNotificationIds.length === 0) return;
+        
+        try {
+            const { error } = await supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('recipient_id', user.id.toString())
+                .in('id', unreadNotificationIds);
+
+            if (error) throw error;
+
+            // Update local state
+            const updatedNotifications = notifications.map(n => ({ ...n, is_read: true }));
+            setNotifications(updatedNotifications);
+            setUnreadCount(0);
+            
+            // Emit global event
+            window.dispatchEvent(new CustomEvent('notificationUpdate', {
+                detail: { unreadCount: 0 }
+            }));
+            
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    };
+
     // Simple notification refresh without WebSocket
     useEffect(() => {
         if (!user) return;
@@ -810,56 +875,162 @@ export default function Dashboard() {
                 </button>
             )}
 
-            {/* Notification Panel */}
+            {/* Professional Notification Panel */}
             {showNotifications && (
                 <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm" onClick={() => setShowNotifications(false)}>
-                    <div className="fixed right-0 top-0 h-full w-80 max-w-full bg-white shadow-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold text-oxford">Notifications</h3>
-                                <button onClick={() => setShowNotifications(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                                    <X className="w-5 h-5" />
-                                </button>
+                    <div className="fixed top-16 sm:inset-y-0 right-2 sm:right-0 w-80 sm:w-96 md:w-[28rem] max-h-[calc(100vh-5rem)] sm:max-h-none bg-white shadow-xl border border-gray-200 rounded-xl sm:rounded-l-none sm:border-l overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        {/* Professional Header with Card Layout */}
+                        <div className="bg-white border-b border-gray-200">
+                            <div className="p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="relative">
+                                            <div className="w-10 h-10 bg-oxford/10 rounded-lg flex items-center justify-center">
+                                                <Bell className="w-5 h-5 text-oxford" />
+                                            </div>
+                                            {unreadCount > 0 && (
+                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <span className="text-xs font-bold text-white">
+                                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
+                                            <p className="text-sm text-gray-500">
+                                                {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setShowNotifications(false)} 
+                                        className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+                                    >
+                                        <X className="w-4 h-4 text-gray-600" />
+                                    </button>
+                                </div>
+                                
+                                {/* Action Cards */}
+                                <div className="flex space-x-2">
+                                    {unreadCount > 0 && (
+                                        <div className="bg-oxford/5 rounded-lg p-3 flex-1">
+                                            <button 
+                                                onClick={markAllAsRead}
+                                                className="w-full flex items-center justify-center space-x-2 py-2 bg-oxford hover:bg-oxford-dark text-white rounded-md transition-colors text-sm font-medium"
+                                            >
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span>Mark all read</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="bg-gray-50 rounded-lg p-3 flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-gray-600">Total</span>
+                                            <span className="text-sm font-bold text-gray-900">{notifications.length}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className="text-xs font-medium text-gray-600">Unread</span>
+                                            <span className="text-sm font-bold text-red-600">{unreadCount}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div className="p-4">
+                        {/* Professional Notifications List */}
+                        <div className="flex-1 overflow-y-auto">
                             {notifications.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <p>No notifications yet</p>
+                                <div className="flex flex-col items-center justify-center py-20 px-4">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                                        <Bell className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+                                        <p className="text-sm text-gray-500">
+                                            You're all caught up! New notifications will appear here.
+                                        </p>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="p-4 space-y-2">
                                     {notifications.slice(0, 10).map((notif) => (
                                         <div
                                             key={notif.id}
+                                            onClick={() => !notif.is_read && markAsRead(notif.id)}
                                             className={cn(
-                                                "p-3 rounded-lg border",
+                                                "bg-white border rounded-xl p-4 transition-all duration-200 cursor-pointer group hover:shadow-md",
                                                 notif.is_read 
-                                                    ? "bg-gray-50 border-gray-200" 
-                                                    : "bg-blue-50 border-blue-200"
+                                                    ? "border-gray-200 hover:border-gray-300" 
+                                                    : "border-l-4 border-l-oxford bg-oxford/5 border-gray-200 hover:bg-oxford/10"
                                             )}
                                         >
-                                            <div className="flex items-start gap-3">
-                                                {notif.type === 'status_update' && <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5" />}
-                                                {notif.type === 'welcome' && <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />}
-                                                {notif.type === 'info' && <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5" />}
+                                            <div className="flex items-start space-x-3">
+                                                {/* Icon Card */}
+                                                <div className={cn(
+                                                    "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+                                                    notif.is_read 
+                                                        ? "bg-gray-100" 
+                                                        : "bg-oxford text-white"
+                                                )}>
+                                                    {notif.type === 'status_update' && <AlertCircle className={cn("w-5 h-5", notif.is_read ? "text-gray-500" : "text-white")} />}
+                                                    {notif.type === 'welcome' && <CheckCircle2 className={cn("w-5 h-5", notif.is_read ? "text-gray-500" : "text-white")} />}
+                                                    {notif.type === 'info' && <AlertTriangle className={cn("w-5 h-5", notif.is_read ? "text-gray-500" : "text-white")} />}
+                                                </div>
                                                 
+                                                {/* Content */}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-xs text-gray-900 mb-1">
-                                                        {notif.title}
-                                                    </p>
-                                                    <p className="text-xs text-gray-600">
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div className="flex-1">
+                                                            <h3 className={cn(
+                                                                "font-semibold text-sm leading-tight mb-1",
+                                                                notif.is_read ? "text-gray-700" : "text-gray-900"
+                                                            )}>
+                                                                {notif.title}
+                                                            </h3>
+                                                            
+                                                            {!notif.is_read && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                                                    New
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <p className={cn(
+                                                        "text-sm mb-3",
+                                                        notif.is_read ? "text-gray-600" : "text-gray-700"
+                                                    )}>
                                                         {notif.message}
                                                     </p>
-                                                    <p className="text-[10px] text-gray-400 mt-1">
-                                                        {new Date(notif.created_at).toLocaleDateString()} {new Date(notif.created_at).toLocaleTimeString()}
-                                                    </p>
+                                                    
+                                                    {/* Time Card */}
+                                                    <div className="bg-gray-50 rounded-lg px-3 py-1 inline-block">
+                                                        <p className="text-xs text-gray-500 font-medium">
+                                                            {new Date(notif.created_at).toLocaleDateString()} • {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
+                                    
+                                    {/* Mobile Action Card */}
+                                    {unreadCount > 0 && (
+                                        <div className="pt-4 sm:hidden">
+                                            <div className="bg-oxford/5 rounded-xl p-4">
+                                                <button
+                                                    onClick={markAllAsRead}
+                                                    className="w-full bg-oxford hover:bg-oxford-dark text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors"
+                                                >
+                                                    <CheckCircle2 className="w-5 h-5" />
+                                                    <span>Mark All as Read</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

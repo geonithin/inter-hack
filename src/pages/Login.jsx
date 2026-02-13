@@ -71,7 +71,7 @@ export default function Login() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base placeholder:opacity-30"
-                                placeholder={role === 'lead' ? 'lead@college.edu' : 'FAC001 or faculty@college.edu'}
+                                placeholder={role === 'lead' ? 'Enter your Team Lead Email' : 'Enter your Faculty Email'}
                             />
                         </div>
                         <div className="space-y-2">
@@ -82,7 +82,7 @@ export default function Login() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full p-3 sm:p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm sm:text-base placeholder:opacity-30"
-                                placeholder="••••••••"
+                                placeholder="The password must be 6 characters long"
                             />
                         </div>
                         <button

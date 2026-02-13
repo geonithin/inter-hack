@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, CheckCircle2, XCircle, Search, Filter, ArrowUpRight, Edit, Trash2, X, Plus, AlertTriangle } from 'lucide-react';
+import { Users, FileText, CheckCircle2, XCircle, Search, Filter, ArrowUpRight, Edit, Trash2, X, Plus, AlertTriangle, Bell, Send, MessageCircle, Clock, Target, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -25,12 +25,25 @@ export default function FacultyDashboard() {
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [currentView, setCurrentView] = useState('teams'); // 'teams' or 'statements'
+    const [currentView, setCurrentView] = useState('teams'); // 'teams', 'statements', or 'notifications'
     const [error, setError] = useState(null);
     
     // State management
     const [teams, setTeams] = useState([]);
     const [problemStatements, setProblemStatements] = useState([]);
+    
+    // Notification sending state
+    const [sendingNotification, setSendingNotification] = useState(false);
+    const [sentNotifications, setSentNotifications] = useState([]);
+    const [notificationForm, setNotificationForm] = useState({
+        title: '',
+        message: '',
+        type: 'info',
+        priority: 'normal',
+        recipient_filter: 'all',
+        specific_teams: [],
+        department: 'all'
+    });
     
     // New statement form
     const [newStatement, setNewStatement] = useState({
@@ -99,23 +112,18 @@ export default function FacultyDashboard() {
             
             setProblemStatements(statementsData);
             
-            // Fetch teams with problem statement info and profiles join
+            // Fetch teams and their related data separately for reliability
             let teamsData = [];
             try {
                 const { data, error: teamsError } = await supabase
                     .from('teams')
-                    .select(`
-                        *,
-                        problem_statements(title, department),
-                        profiles!teams_lead_id_fkey(full_name, email)
-                    `);
+                    .select('*')
+                    .order('name');
 
                 if (teamsError) {
                     console.error('Teams error:', teamsError);
-                    // If teams query fails, set empty array and continue
                     teamsData = [];
                 } else {
-                    console.log('Teams fetched:', data?.length || 0);
                     teamsData = data || [];
                 }
             } catch (err) {
@@ -123,19 +131,54 @@ export default function FacultyDashboard() {
                 teamsData = [];
             }
             
-            const processedTeams = teamsData.map(t => ({
-                id: t.id,
-                name: t.name || 'Unnamed Team',
-                lead: t.profiles?.full_name || 'Unknown', // Use joined profile name
-                leadEmail: t.profiles?.email || 'N/A', // Use joined profile email
-                statement: t.problem_statements?.title || 'Not Selected',
-                status: t.status || 'Pending',
-                dept: t.department || t.problem_statements?.department || 'N/A', // Use team department first
-                year: t.year || '',
-                section: t.section || '',
-                lead_id: t.lead_id,
-                selected_statement_id: t.selected_statement_id
-            }));
+            // Process teams and fetch related data
+            const processedTeams = [];
+            for (const team of teamsData) {
+                // Fetch lead profile if lead_id exists
+                let leadProfile = null;
+                if (team.lead_id) {
+                    try {
+                        const { data: profileData } = await supabase
+                            .from('profiles')
+                            .select('full_name, email')
+                            .eq('id', team.lead_id)
+                            .single();
+                        leadProfile = profileData;
+                    } catch (err) {
+                        console.warn(`Could not fetch profile for team ${team.name}:`, err.message);
+                    }
+                }
+
+                // Fetch problem statement if selected
+                let problemStatement = null;
+                if (team.selected_statement_id) {
+                    try {
+                        const { data: statementData } = await supabase
+                            .from('problem_statements')
+                            .select('title, department')
+                            .eq('id', team.selected_statement_id)
+                            .single();
+                        problemStatement = statementData;
+                    } catch (err) {
+                        console.warn(`Could not fetch statement for team ${team.name}:`, err.message);
+                    }
+                }
+
+                processedTeams.push({
+                    id: team.id,
+                    name: team.name || 'Unnamed Team',
+                    lead: leadProfile?.full_name || 'Lead information pending',
+                    leadEmail: leadProfile?.email || 'Email pending',
+                    statement: problemStatement?.title || 'Not Selected',
+                    status: team.status || 'Pending',
+                    dept: team.department || problemStatement?.department || 'Department pending',
+                    year: team.year || 'Year pending',
+                    section: team.section || 'Section pending',
+                    lead_id: team.lead_id,
+                    selected_statement_id: team.selected_statement_id
+                });
+            }
+
             setTeams(processedTeams);
             
             console.log('Data fetch completed successfully');
@@ -147,22 +190,6 @@ export default function FacultyDashboard() {
             setTeams([]);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const fetchTeamMembers = async (teamId) => {
-        try {
-            const { data, error } = await supabase
-                .from('members')
-                .select('*')
-                .eq('team_id', teamId)
-                .order('name');
-                
-            if (error) throw error;
-            setTeamMembers(data || []);
-        } catch (error) {
-            console.error('Error fetching team members:', error);
-            setTeamMembers([]);
         }
     };
     
@@ -612,11 +639,104 @@ export default function FacultyDashboard() {
         { label: 'Total Teams', value: teams.length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'Selected Teams', value: teams.filter(t => t.status === 'Selected').length, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50' },
         { label: 'Pending Review', value: teams.filter(t => t.status === 'Pending').length, icon: ArrowUpRight, color: 'text-amber-600', bg: 'bg-amber-50' },
-    ] : [
+    ] : currentView === 'statements' ? [
         { label: 'Active Statements', value: problemStatements.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'CS Track', value: problemStatements.filter(s => s.department === 'CS').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'EC Track', value: problemStatements.filter(s => s.department === 'EC').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+    ] : [
+        { label: 'Messages Sent', value: sentNotifications.length, icon: Send, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { label: 'Total Recipients', value: teams.length, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'Active Teams', value: teams.filter(t => t.status === 'Selected').length, icon: Zap, color: 'text-orange-600', bg: 'bg-orange-50' },
     ];
+
+    // Send notification function
+    const handleSendNotification = async (e) => {
+        e.preventDefault();
+        if (!notificationForm.title || !notificationForm.message) {
+            showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        setSendingNotification(true);
+        try {
+            let recipientIds = [];
+            
+            // Determine recipients based on filter
+            if (notificationForm.recipient_filter === 'all') {
+                recipientIds = teams.map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'selected') {
+                recipientIds = teams.filter(t => t.status === 'Selected').map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'pending') {
+                recipientIds = teams.filter(t => t.status === 'Pending').map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'department') {
+                recipientIds = teams.filter(t => t.dept === notificationForm.department).map(t => t.lead_id).filter(Boolean);
+            } else if (notificationForm.recipient_filter === 'specific') {
+                recipientIds = notificationForm.specific_teams.map(teamId => {
+                    const team = teams.find(t => t.id === teamId);
+                    return team?.lead_id;
+                }).filter(Boolean);
+            }
+
+            if (recipientIds.length === 0) {
+                showNotification('No valid recipients found', 'error');
+                setSendingNotification(false);
+                return;
+            }
+
+            // Send to each recipient
+            const notifications = recipientIds.map(recipientId => ({
+                title: notificationForm.title,
+                message: notificationForm.message,
+                type: notificationForm.type,
+                priority: notificationForm.priority,
+                recipient_id: recipientId,
+                sender_type: 'faculty',
+                sender_id: user.id,
+                created_at: new Date().toISOString(),
+                is_read: false
+            }));
+
+            const { error } = await supabase
+                .from('notifications')
+                .insert(notifications);
+
+            if (error) throw error;
+
+            // Track sent notification
+            const sentNotification = {
+                id: Date.now(),
+                title: notificationForm.title,
+                message: notificationForm.message,
+                type: notificationForm.type,
+                recipient_count: recipientIds.length,
+                sent_at: new Date().toISOString(),
+                filter_type: notificationForm.recipient_filter
+            };
+
+            setSentNotifications(prev => [sentNotification, ...prev]);
+            
+            showNotification(
+                `Message sent successfully to ${recipientIds.length} recipient${recipientIds.length > 1 ? 's' : ''}!`, 
+                'success'
+            );
+            
+            // Reset form
+            setNotificationForm({
+                title: '',
+                message: '',
+                type: 'info',
+                priority: 'normal',
+                recipient_filter: 'all',
+                specific_teams: [],
+                department: 'all'
+            });
+        } catch (error) {
+            console.error('Error sending notification:', error);
+            showNotification('Failed to send notification: ' + error.message, 'error');
+        } finally {
+            setSendingNotification(false);
+        }
+    };
 
     // Emergency fallback for debugging
     if (typeof isAuthenticated !== 'function') {
@@ -734,26 +854,38 @@ export default function FacultyDashboard() {
                             <button
                                 onClick={() => setCurrentView('teams')}
                                 className={cn(
-                                    "px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
                                     currentView === 'teams' 
                                         ? "bg-oxford text-white shadow-lg transform scale-105" 
                                         : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
                                 )}
                             >
-                                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                                 Teams
                             </button>
                             <button
                                 onClick={() => setCurrentView('statements')}
                                 className={cn(
-                                    "px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
                                     currentView === 'statements' 
                                         ? "bg-oxford text-white shadow-lg transform scale-105" 
                                         : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
                                 )}
                             >
-                                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                                 Statements
+                            </button>
+                            <button
+                                onClick={() => setCurrentView('notifications')}
+                                className={cn(
+                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                    currentView === 'notifications' 
+                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                )}
+                            >
+                                <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
+                                Messages
                             </button>
                         </div>
                     </div>
@@ -841,7 +973,7 @@ export default function FacultyDashboard() {
                                 <option value="Rejected">Rejected</option>
                             </select>
                         </div>
-                    ) : (
+                    ) : currentView === 'statements' ? (
                         <div className="flex gap-2">
                             <select
                                 value={deptFilter}
@@ -863,6 +995,17 @@ export default function FacultyDashboard() {
                                 Add Statement
                             </button>
                         </div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <div className="px-4 py-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-100 rounded-xl">
+                                <div className="flex items-center gap-2">
+                                    <MessageCircle className="w-4 h-4 text-indigo-600" />
+                                    <span className="text-[9px] font-black text-indigo-700 uppercase tracking-widest">
+                                        Message Center Active
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -871,39 +1014,39 @@ export default function FacultyDashboard() {
             {currentView === 'teams' ? (
                 <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
                     <div className="overflow-x-auto text-[10px] sm:text-xs">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead className="bg-oxford text-white border-b-4 border-oxford">
                                 <tr className="font-black uppercase tracking-[0.2em]">
-                                    <th className="p-5">Team Info</th>
-                                    <th className="p-5 border-l-2 border-white/10">Lead Details</th>
-                                    <th className="p-5 border-l-2 border-white/10">Chosen Statement</th>
-                                    <th className="p-5 border-l-2 border-white/10 text-center">Status</th>
+                                    <th className="p-5 w-1/4 min-w-[200px]">Team Info</th>
+                                    <th className="p-5 border-l-2 border-white/10 w-1/4 min-w-[180px]">Lead Details</th>
+                                    <th className="p-5 border-l-2 border-white/10 w-1/3 min-w-[220px]">Chosen Statement</th>
+                                    <th className="p-5 border-l-2 border-white/10 text-center w-1/6 min-w-[120px]">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y-2 divide-oxford/10">
                                 {filteredTeams.length > 0 ? filteredTeams.map((team) => (
                                     <tr key={team.id} className="hover:bg-oxford/2 transition-colors group">
-                                        <td className="p-5 sm:p-6">
+                                        <td className="p-5 sm:p-6 align-top">
                                             <button 
                                                 onClick={() => navigate(`/faculty/team/${team.id}`)}
                                                 className="text-left w-full hover:bg-oxford/5 rounded-lg p-2 -m-2 transition-all group/name"
                                             >
-                                                <p className="font-black text-oxford uppercase tracking-tight group-hover/name:text-oxford-dark group-hover/name:underline transition-all cursor-pointer">
+                                                <p className="font-black text-oxford uppercase tracking-tight group-hover/name:text-oxford-dark group-hover/name:underline transition-all cursor-pointer break-words">
                                                     {team.name}
                                                 </p>
-                                                <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest mt-0.5">
+                                                <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest mt-0.5 break-words">
                                                     {team.dept} | {team.year} - {team.section}
                                                 </p>
                                             </button>
                                         </td>
-                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
-                                            <p className="font-black text-oxford uppercase tracking-tight">{team.lead}</p>
-                                            <p className="text-[9px] font-black text-oxford/40 mt-0.5">{team.leadEmail}</p>
+                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 align-top">
+                                            <p className="font-black text-oxford uppercase tracking-tight break-words">{team.lead}</p>
+                                            <p className="text-[9px] font-black text-oxford/40 mt-0.5 break-all">{team.leadEmail}</p>
                                         </td>
-                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
-                                            <p className="font-black text-oxford uppercase tracking-tight line-clamp-2 max-w-62.5">{team.statement}</p>
+                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 align-top">
+                                            <p className="font-black text-oxford uppercase tracking-tight line-clamp-3 break-words">{team.statement}</p>
                                         </td>
-                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 text-center">
+                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 text-center align-top">
                                             <div className="relative status-dropdown-container">
                                                 <button 
                                                     onClick={() => setOpenStatusDropdown(openStatusDropdown === team.id ? null : team.id)}
@@ -967,7 +1110,7 @@ export default function FacultyDashboard() {
                         </table>
                     </div>
                 </div>
-            ) : (
+            ) : currentView === 'statements' ? (
                 /* Problem Statements View */
                 <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
                     <div className="overflow-x-auto text-[10px] sm:text-xs">
@@ -1035,6 +1178,190 @@ export default function FacultyDashboard() {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            ) : (
+                /* Notification Sending Section */
+                <div className="space-y-6">
+                    {/* Message Composer */}
+                    <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
+                        <div className="bg-linear-to-r from-oxford to-oxford/90 p-6 text-white">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-white/20 rounded-xl">
+                                    <MessageCircle className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black uppercase tracking-tight">Send Message</h3>
+                                    <p className="text-sm opacity-80">Broadcast announcements to team leads</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form onSubmit={handleSendNotification} className="p-6 space-y-6">
+                            {/* Message Title */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                    Message Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={notificationForm.title}
+                                    onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
+                                    placeholder="Enter announcement title..."
+                                    className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
+                                    required
+                                />
+                            </div>
+
+                            {/* Message Content */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                    Message Content *
+                                </label>
+                                <textarea
+                                    value={notificationForm.message}
+                                    onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
+                                    placeholder="Write your message here..."
+                                    rows={6}
+                                    className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium resize-none"
+                                    required
+                                />
+                            </div>
+
+                            {/* Message Configuration */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                        Message Type
+                                    </label>
+                                    <select
+                                        value={notificationForm.type}
+                                        onChange={(e) => setNotificationForm(prev => ({ ...prev, type: e.target.value }))}
+                                        className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
+                                    >
+                                        <option value="info">Information</option>
+                                        <option value="success">Success</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="error">Important</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                        Priority
+                                    </label>
+                                    <select
+                                        value={notificationForm.priority}
+                                        onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
+                                        className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                        Recipients
+                                    </label>
+                                    <select
+                                        value={notificationForm.recipient_filter}
+                                        onChange={(e) => setNotificationForm(prev => ({ ...prev, recipient_filter: e.target.value }))}
+                                        className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
+                                    >
+                                        <option value="all">All Teams</option>
+                                        <option value="selected">Selected Teams Only</option>
+                                        <option value="pending">Pending Teams Only</option>
+                                        <option value="department">By Department</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Department Filter */}
+                            {notificationForm.recipient_filter === 'department' && (
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-black text-oxford uppercase tracking-widest">
+                                        Department
+                                    </label>
+                                    <select
+                                        value={notificationForm.department}
+                                        onChange={(e) => setNotificationForm(prev => ({ ...prev, department: e.target.value }))}
+                                        className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
+                                    >
+                                        <option value="CS">Computer Science</option>
+                                        <option value="EC">Electronics</option>
+                                        <option value="ME">Mechanical</option>
+                                        <option value="CE">Civil</option>
+                                        <option value="EE">Electrical</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Send Button */}
+                            <div className="flex justify-end pt-4 border-t border-oxford/10">
+                                <button
+                                    type="submit"
+                                    disabled={sendingNotification || !notificationForm.title || !notificationForm.message}
+                                    className={cn(
+                                        "px-8 py-3 bg-oxford text-white font-black rounded-xl uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95 flex items-center gap-3",
+                                        sendingNotification || !notificationForm.title || !notificationForm.message 
+                                            ? "opacity-50 cursor-not-allowed" 
+                                            : "hover:bg-oxford/90"
+                                    )}
+                                >
+                                    {sendingNotification ? (
+                                        <>
+                                            <Clock className="w-5 h-5 animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-5 h-5" />
+                                            Send Message
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Sent Messages History */}
+                    {sentNotifications.length > 0 && (
+                        <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
+                            <div className="bg-gray-50 p-4 border-b border-oxford/10">
+                                <h4 className="text-lg font-black text-oxford uppercase tracking-tight">Recent Messages</h4>
+                                <p className="text-sm text-oxford/60">Messages sent to teams</p>
+                            </div>
+                            <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                                {sentNotifications.slice(0, 10).map((sentMsg) => (
+                                    <div key={sentMsg.id} className="p-4 border-2 border-oxford/10 rounded-xl hover:border-oxford/20 transition-all">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1">
+                                                <h5 className="font-black text-oxford text-sm mb-1">{sentMsg.title}</h5>
+                                                <p className="text-sm text-oxford/70 mb-2 line-clamp-2">{sentMsg.message}</p>
+                                                <div className="flex items-center gap-4 text-xs text-oxford/50">
+                                                    <span>Sent to {sentMsg.recipient_count} recipient{sentMsg.recipient_count > 1 ? 's' : ''}</span>
+                                                    <span>•</span>
+                                                    <span>{new Date(sentMsg.sent_at).toLocaleDateString()}</span>
+                                                    <span>•</span>
+                                                    <span className="capitalize">{sentMsg.filter_type} teams</span>
+                                                </div>
+                                            </div>
+                                            <div className={cn(
+                                                "px-3 py-1 rounded-lg text-xs font-black uppercase",
+                                                sentMsg.type === 'success' ? "bg-green-50 text-green-700" :
+                                                sentMsg.type === 'warning' ? "bg-amber-50 text-amber-700" :
+                                                sentMsg.type === 'error' ? "bg-red-50 text-red-700" :
+                                                "bg-blue-50 text-blue-700"
+                                            )}>
+                                                {sentMsg.type}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1208,24 +1535,28 @@ export default function FacultyDashboard() {
                                 </h4>
                                 {teamMembers.length > 0 ? (
                                     <div className="grid gap-4">
-                                        {teamMembers.map((member, index) => (
+                                        {teamMembers.map((member) => (
                                             <div key={member.id} className="bg-gray-50 p-4 rounded-xl border-2 border-oxford/10">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                                                    <div>
-                                                        <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Name</p>
-                                                        <p className="font-black text-oxford">{member.name}</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Name</p>
+                                                            <p className="font-black text-oxford">{member.name}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Email</p>
+                                                            <p className="font-bold text-oxford break-words">{member.email}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Register No</p>
-                                                        <p className="font-bold text-oxford">{member.register_number}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Email</p>
-                                                        <p className="font-bold text-oxford truncate">{member.email}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Phone</p>
-                                                        <p className="font-bold text-oxford">{member.phone}</p>
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Register No</p>
+                                                            <p className="font-bold text-oxford">{member.register_number}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-oxford/40 uppercase tracking-widest">Phone</p>
+                                                            <p className="font-bold text-oxford">{member.phone}</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1283,7 +1614,7 @@ export default function FacultyDashboard() {
                             <h3 className="text-base sm:text-xl md:text-2xl font-black uppercase tracking-tighter">Add Problem Statement</h3>
                             <button 
                                 onClick={() => setIsStatementModalOpen(false)} 
-                                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl transition-all flex-shrink-0"
+                                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl transition-all shrink-0"
                                 aria-label="Close modal"
                             >
                                 <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1387,7 +1718,7 @@ export default function FacultyDashboard() {
             {/* Delete Statement Confirmation */}
             {isDeleteStatementModalOpen && selectedStatement && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white rounded-4xl w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
                         <div className="bg-red-600 p-6 text-white flex items-center gap-4">
                             <div className="p-3 bg-white/20 rounded-xl">
                                 <AlertTriangle className="w-6 h-6" />
@@ -1424,7 +1755,7 @@ export default function FacultyDashboard() {
             {/* Delete Confirmation Modal */}
             {deleteConfirmId && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-oxford/40 backdrop-blur-sm animate-in fade-in duration-300 text-oxford">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white rounded-4xl w-full max-w-md overflow-hidden shadow-2xl border-4 border-red-600 animate-in zoom-in-95 duration-300">
                         <div className="bg-red-600 p-6 text-white flex items-center gap-4">
                             <div className="p-3 bg-white/20 rounded-xl">
                                 <Trash2 className="w-6 h-6" />

@@ -386,14 +386,14 @@ export default function Layout() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors relative">
-                                                    <AlertCircle className="w-4 h-4" />
+                                                    <Bell className="w-4 h-4" />
                                                     {unreadCount > 0 && (
                                                         <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs font-bold px-1 py-0.5 rounded-full border border-slate-100">
                                                             {unreadCount > 99 ? '99+' : unreadCount}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="font-medium text-sm">Alerts</p>
+                                                <p className="font-medium text-sm">Notifications</p>
                                             </div>
                                             {unreadCount > 0 && (
                                                 <div className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">

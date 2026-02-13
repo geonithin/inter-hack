@@ -165,10 +165,10 @@ export default function Landing() {
                     
                 </div>
                 <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed mt-12 sm:mt-16">
-                    INTRA HACKATHON 2026 <br className="hidden sm:block" />
+                    INNOTECH CHALLENGE'26 <br className="hidden sm:block" />
                 </p>
                 <p className="text-sm sm:text-lg lg:text-xl text-oxford/70 max-w-4xl mx-auto font-semibold -mt-5 tracking-tight leading-relaxed">
-                    Innovate, Collaborate, and Build the Future using Zero-Cost Technologies.
+                    INTRA HACKATHON 2026
                 </p>
             </div>
 
@@ -362,7 +362,7 @@ export default function Landing() {
                         </div>
                         
                         {submitStatus === 'success' && (
-                            <div className="bg-green-500/20 border-2 border-green-400 text-green-100 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top">
+                            <div className="bg-green-500/20 text-green-100 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top shadow-lg shadow-green-500/25">
                                 <CheckCircle className="w-5 h-5 shrink-0" />
                                 <p className="font-bold text-sm">Message sent successfully! We'll get back to you soon.</p>
                             </div>
