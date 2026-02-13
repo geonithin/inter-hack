@@ -42,14 +42,14 @@ export default function FacultyDashboard() {
         priority: 'normal',
         recipient_filter: 'all',
         specific_teams: [],
-        department: 'all'
+        department: 'CSE'
     });
     
     // New statement form
     const [newStatement, setNewStatement] = useState({
         title: '',
         description: '',
-        department: 'CS',
+        department: 'CSE',
         max_teams: 3
     });
 
@@ -325,7 +325,7 @@ export default function FacultyDashboard() {
             showNotification('Problem statement added successfully!', 'success');
             await fetchData();
             setIsStatementModalOpen(false);
-            setNewStatement({ title: '', description: '', department: 'CS', max_teams: 3 });
+            setNewStatement({ title: '', description: '', department: 'CSE', max_teams: 3 });
         } catch (error) {
             console.error('Error adding statement:', error);
             showNotification(
@@ -641,8 +641,9 @@ export default function FacultyDashboard() {
         { label: 'Pending Review', value: teams.filter(t => t.status === 'Pending').length, icon: ArrowUpRight, color: 'text-amber-600', bg: 'bg-amber-50' },
     ] : currentView === 'statements' ? [
         { label: 'Active Statements', value: problemStatements.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'CS Track', value: problemStatements.filter(s => s.department === 'CS').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { label: 'EC Track', value: problemStatements.filter(s => s.department === 'EC').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'CSE Track', value: problemStatements.filter(s => s.department === 'CSE').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'AIDS Track', value: problemStatements.filter(s => s.department === 'AIDS').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'ECE Track', value: problemStatements.filter(s => s.department === 'ECE').length, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     ] : [
         { label: 'Messages Sent', value: sentNotifications.length, icon: Send, color: 'text-indigo-600', bg: 'bg-indigo-50' },
         { label: 'Total Recipients', value: teams.length, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -728,7 +729,7 @@ export default function FacultyDashboard() {
                 priority: 'normal',
                 recipient_filter: 'all',
                 specific_teams: [],
-                department: 'all'
+                department: 'CSE'
             });
         } catch (error) {
             console.error('Error sending notification:', error);
@@ -956,11 +957,11 @@ export default function FacultyDashboard() {
                                 className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
                             >
                                 <option value="">All Departments</option>
-                                <option value="CS">Computer Science</option>
-                                <option value="EC">Electronics</option>
-                                <option value="ME">Mechanical</option>
-                                <option value="CE">Civil</option>
-                                <option value="EE">Electrical</option>
+                                <option value="CSE">Computer Science & Engineering</option>
+                                <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                <option value="ECE">Electronics & Communication Engineering</option>
+                                <option value="EEE">Electrical & Electronics Engineering</option>
+                                <option value="MECH">Mechanical Engineering</option>
                             </select>
                             <select
                                 value={statusFilter}
@@ -981,11 +982,11 @@ export default function FacultyDashboard() {
                                 className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
                             >
                                 <option value="">All Departments</option>
-                                <option value="CS">Computer Science</option>
-                                <option value="EC">Electronics</option>
-                                <option value="ME">Mechanical</option>
-                                <option value="CE">Civil</option>
-                                <option value="EE">Electrical</option>
+                                <option value="CSE">Computer Science & Engineering</option>
+                                <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                <option value="ECE">Electronics & Communication Engineering</option>
+                                <option value="EEE">Electrical & Electronics Engineering</option>
+                                <option value="MECH">Mechanical Engineering</option>
                             </select>
                             <button
                                 onClick={() => setIsStatementModalOpen(true)}
@@ -1288,11 +1289,11 @@ export default function FacultyDashboard() {
                                         onChange={(e) => setNotificationForm(prev => ({ ...prev, department: e.target.value }))}
                                         className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
                                     >
-                                        <option value="CS">Computer Science</option>
-                                        <option value="EC">Electronics</option>
-                                        <option value="ME">Mechanical</option>
-                                        <option value="CE">Civil</option>
-                                        <option value="EE">Electrical</option>
+                                        <option value="CSE">Computer Science & Engineering</option>
+                                        <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                        <option value="ECE">Electronics & Communication Engineering</option>
+                                        <option value="EEE">Electrical & Electronics Engineering</option>
+                                        <option value="MECH">Mechanical Engineering</option>
                                     </select>
                                 </div>
                             )}
@@ -1667,11 +1668,11 @@ export default function FacultyDashboard() {
                                         onChange={(e) => setNewStatement({ ...newStatement, department: e.target.value })}
                                         className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-black text-xs sm:text-sm uppercase"
                                     >
-                                        <option value="CS">Computer Science</option>
-                                        <option value="EC">Electronics & Communication</option>
-                                        <option value="ME">Mechanical Engineering</option>
-                                        <option value="EE">Electrical Engineering</option>
-                                        <option value="CE">Civil Engineering</option>
+                                        <option value="CSE">Computer Science & Engineering</option>
+                                        <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                        <option value="ECE">Electronics & Communication Engineering</option>
+                                        <option value="EEE">Electrical & Electronics Engineering</option>
+                                        <option value="MECH">Mechanical Engineering</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">

@@ -454,11 +454,11 @@ export default function NotificationCenter({
                                 onChange={(e) => setNotificationForm(prev => ({ ...prev, department: e.target.value }))}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-oxford focus:ring-1 focus:ring-oxford outline-none transition-all"
                             >
-                                <option value="CS">Computer Science</option>
-                                <option value="EC">Electronics</option>
-                                <option value="ME">Mechanical</option>
-                                <option value="CE">Civil</option>
-                                <option value="EE">Electrical</option>
+                                <option value="CSE">Computer Science & Engineering</option>
+                                <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                <option value="ECE">Electronics & Communication Engineering</option>
+                                <option value="EEE">Electrical & Electronics Engineering</option>
+                                <option value="MECH">Mechanical Engineering</option>
                             </select>
                         </div>
                     )}
