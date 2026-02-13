@@ -1,37 +1,19 @@
--- Create problem statements table and seed data
--- Run this in your Supabase SQL Editor
+-- Clear existing problem statements and insert new ones
+-- This script updates the problem statements with real department-specific content
 
--- Create problem_statements table
-create table if not exists problem_statements (
-  id serial primary key,
-  title text not null,
-  description text not null,
-  department text not null check (department in ('CSE', 'AIDS', 'ECE', 'EEE', 'MECH')),
-  max_teams integer default 3,
-  is_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- First, update the department constraint to include the new department codes
+ALTER TABLE problem_statements DROP CONSTRAINT IF EXISTS problem_statements_department_check;
+ALTER TABLE problem_statements ADD CONSTRAINT problem_statements_department_check 
+CHECK (department IN ('CSE', 'AIDS', 'ECE', 'EEE', 'MECH'));
 
--- Enable RLS for problem_statements
-alter table problem_statements enable row level security;
+-- Clear existing problem statements
+DELETE FROM problem_statements;
 
--- Drop existing policies if they exist
-drop policy if exists "Problem statements are viewable by everyone" on problem_statements;
-drop policy if exists "Faculty and admin can manage problem statements" on problem_statements;
-drop policy if exists "Faculty can insert problem statements" on problem_statements;
-drop policy if exists "Faculty can update problem statements" on problem_statements;
-drop policy if exists "Faculty can delete problem statements" on problem_statements;
-drop policy if exists "Allow all operations on problem_statements" on problem_statements;
+-- Reset the sequence for clean IDs
+ALTER SEQUENCE problem_statements_id_seq RESTART WITH 1;
 
--- Completely permissive policy (TEMPORARY - for debugging)
-create policy "Allow all operations on problem_statements" on problem_statements 
-for all 
-using (true) 
-with check (true);
-
--- Insert real problem statements
-insert into problem_statements (title, description, department, max_teams) values
+-- Insert comprehensive real problem statements
+INSERT INTO problem_statements (title, description, department, max_teams) VALUES
 -- CSE (Computer Applications / Computer Science)
 ('Smart Campus Management System', 'Inefficient campus operations due to fragmented and manual management systems. To build a centralized digital platform that automates academic, administrative, and infrastructure operations. To improve transparency, efficiency, and decision-making using real-time analytics. Colleges handle multiple operations such as attendance, scheduling, security, and resource usage, often through isolated systems. This leads to redundancy, data inconsistency, and delays. A smart campus platform can integrate all subsystems into one intelligent solution. It enables automation, analytics, and better user experience for students and staff.', 'CSE', 3),
 ('AI-Based Student Performance Prediction System', 'Lack of early prediction systems for identifying academically at-risk students. To develop an AI model that predicts student performance using academic and behavioral data. To enable timely academic counseling and intervention strategies. Many students struggle academically due to undetected learning gaps and personal challenges. Traditional grading methods do not provide predictive insights. An AI-based system can analyze attendance, test scores, and learning patterns to forecast performance. This allows educators to take preventive action and improve learning outcomes.', 'CSE', 3),
@@ -92,56 +74,5 @@ insert into problem_statements (title, description, department, max_teams) value
 ('Portable Low-Cost Sanitation System', 'Many regions lack access to hygienic sanitation facilities. To design a portable, affordable sanitation unit. To improve hygiene and public health standards. Sanitation access is limited in rural and disaster-affected areas. Portable systems provide immediate hygiene solutions. Mechanical design ensures durability and low cost. This improves health and living conditions.', 'MECH', 3),
 ('Fuel Efficiency Optimization System', 'Low fuel efficiency increases transportation costs and emissions. To develop mechanical optimization techniques to improve vehicle mileage. To reduce fuel consumption and environmental impact. Fuel efficiency depends on engine design, driving conditions, and mechanical parameters. Optimized mechanical systems reduce friction and improve combustion efficiency. This results in better mileage and lower emissions. It supports sustainable transportation.', 'MECH', 3);
 
--- Update teams table to use proper foreign key
--- First, check if the column exists and update it
-do $$
-begin
-  -- Check if selected_statement_id column exists
-  if exists (select 1 from information_schema.columns where table_name = 'teams' and column_name = 'selected_statement_id') then
-    -- Update the column to be a proper foreign key
-    alter table teams drop constraint if exists teams_selected_statement_id_fkey;
-    alter table teams add constraint teams_selected_statement_id_fkey 
-      foreign key (selected_statement_id) references problem_statements(id);
-  else
-    -- Add the column if it doesn't exist
-    alter table teams add column selected_statement_id integer references problem_statements(id);
-  end if;
-end
-$$;
-
--- Create faculty table for authentication
-create table if not exists faculty (
-  id serial primary key,
-  faculty_id text unique not null, -- Unique faculty identifier (e.g., FAC001)
-  name text not null,
-  email text unique not null,
-  password text not null, -- In production, this should be hashed
-  department text not null check (department in ('CS', 'EC', 'ME', 'CE', 'EE')),
-  designation text default 'Assistant Professor',
-  is_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Enable RLS for faculty
-alter table faculty enable row level security;
-
--- Drop existing policies if they exist
-drop policy if exists "Faculty can view own record" on faculty;
-drop policy if exists "Admin can manage faculty" on faculty;
-drop policy if exists "Allow faculty login" on faculty;
-
--- Allow public access for faculty login (authentication check)
-create policy "Allow faculty login" on faculty for select using (is_active = true);
-
--- Allow admin to manage all faculty records
-create policy "Admin can manage faculty" on faculty for all using (
-  (select role from profiles where id = auth.uid()) = 'admin'
-);
-
--- Insert default faculty record
-insert into faculty (faculty_id, name, email, password, department, designation) values
-('FAC001', 'Default Faculty', 'faculty@college.edu', '123456', 'CS', 'Professor')
-on conflict (faculty_id) do nothing;
-
--- Note: In production, passwords should be properly hashed using bcrypt or similar
+-- Show the result
+SELECT 'Problem statements updated successfully! Total statements: ' || COUNT(*) FROM problem_statements;
