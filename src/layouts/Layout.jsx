@@ -189,11 +189,11 @@ export default function Layout() {
                 <div className="px-4 sm:px-6 max-w-none w-full h-12 sm:h-16 flex items-center justify-between">
                     <div className="flex items-center shrink-0">
                         <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
-                            <div className="p-1 sm:p-1 bg-white rounded-lg border-2 border-oxford flex items-center justify-center">
-                                <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-8 sm:h-8 object-contain" />
+                            <div className="p-1 sm:p-1 bg-white rounded-lg border-2 border-white flex items-center justify-center">
+                                <img src="/clg-logo.png" alt="Logo" className="w-4 h-4 sm:w-10 sm:h-10 object-contain" />
                             </div>
                             <div className="space-y-0.5">
-                                <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">INTRA HACKATHON 2026</h1>
+                                <h1 className="text-sm sm:text-xl font-black tracking-tighter uppercase leading-none">INNOTECH CHALLANGE'26</h1>
                                 <p className="text-[6px] sm:text-[8px] font-black uppercase opacity-40 tracking-[0.2em]">Stella Mary's College of Engineering</p>
                             </div>
                         </div>

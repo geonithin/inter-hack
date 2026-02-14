@@ -211,8 +211,8 @@ export default function Landing() {
 
             <div className="relative z-10 pt-8 sm:pt-12 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-7xl px-4">
                 {[
-                    { title: "Select Problems", desc: "Choose from department-wise filterable problem statements with live locking logic." },
-                    { title: "Submit Ideas", desc: "Professional platform to submit and track your team's innovative solutions." },
+                    { title: "Select Problems", desc: "Select your problem statement early, as each can be chosen by only three teams on a first-come basis." },
+                    { title: "Submit Ideas", desc: "Submit your solution including a title, brief overview, tech stack used, and an optional prototype link." },
                     { title: "Notifications", desc: "Get instant updates on selection outcomes, deadlines, and dashboard activity." }
                 ].map((feature, i) => (
                     <div key={i} className="p-4 sm:p-8 oxford-edge rounded-xl sm:rounded-2xl space-y-2 sm:space-y-3 bg-white text-left">
@@ -222,6 +222,26 @@ export default function Landing() {
                 ))}
             </div>
 
+<section id="contact" className="relative z-10 pt-8 sm:pt-16 pb-8 sm:pb-12 w-full max-w-7xl px-4 text-left space-y-6 sm:space-y-8">
+    <div className="mt-4 bg-linear-to-br from-oxford to-oxford-light text-white p-4 sm:p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
+                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">50</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Problem Statements</p>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">Certificates</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">For all participants</p>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-black">Cash Prize</div>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Reward</p>
+                        </div>
+                    </div>
+                </div>
+                </section>
             {/* Rules Section */}
             <section id="rules" className="relative z-10 pt-8 sm:pt-16 w-full max-w-5xl px-4 space-y-6 sm:space-y-8">
                 <div className="space-y-2 sm:space-y-4 text-center sm:text-left">
@@ -230,16 +250,16 @@ export default function Landing() {
                 </div>
                 <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
                     <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
-                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Team Composition</h4>
-                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Min 2, Max 5 members per team.</p>
+                        <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Team Size</h4>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">max 2 members per team</p>
                     </div>
                     <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
                         <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Registration</h4>
-                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Complete before the locking period.</p>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Complete before the deadline.</p>
                     </div>
                     <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
                         <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">One Problem</h4>
-                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">Work on only one problem at a time.</p>
+                        <p className="text-xs sm:text-base text-oxford/80 font-bold leading-snug">You can work on only one problem at a time.</p>
                     </div>
                     <div className="w-full max-w-xs sm:max-w-none p-3 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl transition-shadow duration-200 text-center">
                         <h4 className="font-black text-sm sm:text-xl uppercase tracking-tight mb-1 sm:mb-2 text-oxford">Authenticity</h4>
@@ -297,7 +317,7 @@ export default function Landing() {
                                 </div>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Email</h4>
-                                    <a href="mailto:intrahackathon2026@smce.edu.in" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">intrahackathon2026@smce.edu.in</a>
+                                    <a href="mailto:intrahackathon2026@gmail.com" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">intrahackathon2026@gmail.com</a>
                                 </div>
                             </div>
                             
@@ -307,7 +327,8 @@ export default function Landing() {
                                 </div>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Phone</h4>
-                                    <a href="tel:+918608582295" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">+91 86085 82295</a>
+                                    
+                                    <a href="tel:+918220480952" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">+918220480952</a>
                                 </div>
                             </div>
                             <div className="p-4 sm:p-6 bg-white shadow-lg hover:shadow-xl rounded-xl sm:rounded-2xl inline-flex items-start gap-4 transition-shadow duration-200">
@@ -316,8 +337,8 @@ export default function Landing() {
                                 </div>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-1 text-oxford/70">Location</h4>
-                                    <a href="https://www.google.com/maps/place/Stella+Mary's+College+Of+Engineering/@8.1336344,77.3404294,17z/data=!3m1!4b1!4m6!3m5!1s0x3b04fae7b453d579:0xf4356d0b26d3dd2a!8m2!3d8.1336344!4d77.3430043!16s%2Fg%2F11b7qq7hst?entry=ttu&g_ep=EgoyMDI2MDIwOC4wIKXMDSoASAFQAw%3D%3D" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">Stella Mary's College of Engineering<br />
-                                        Kanyakumari District, Tamil Nadu<br />
+                                    <a href="https://www.google.com/maps/place/Stella+Mary's+College+Of+Engineering/@8.1336344,77.3404294,17z/data=!3m1!4b1!4m6!3m5!1s0x3b04fae7b453d579:0xf4356d0b26d3dd2a!8m2!3d8.1336344!4d77.3430043!16s%2Fg%2F11b7qq7hst?entry=ttu&g_ep=EgoyMDI2MDIwOC4wIKXMDSoASAFQAw%3D%3D" className="text-sm sm:text-lg font-black text-oxford hover:text-oxford-light transition-all whitespace-nowrap">Aruthengenvilai, Nagercoil,<br />
+                                         Kanyakumari District,<br />
                                         629002</a>
                                 
                                 </div>
@@ -358,8 +379,9 @@ export default function Landing() {
                             <div className="p-3 bg-white/10 rounded-xl">
                                 <Send className="w-6 h-6 text-white" />
                             </div>
-                            <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Quick Message</h3>
+                            <p className="text-1xl sm:text-1xl font-black uppercase tracking-tight">Facing any issues with the dashboard? Submit your queries here.</p>
                         </div>
+                        
                         
                         {submitStatus === 'success' && (
                             <div className="bg-green-500/20 text-green-100 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top shadow-lg shadow-green-500/25">
@@ -436,24 +458,7 @@ export default function Landing() {
                 </div>
 
                 {/* Additional Info Card to Fill Space */}
-                <div className="mt-4 bg-linear-to-br from-oxford to-oxford-light text-white p-4 sm:p-6 rounded-2xl shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
-                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                        <div className="space-y-1">
-                            <div className="text-2xl sm:text-3xl font-black">30+</div>
-                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Problem Statements</p>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-2xl sm:text-3xl font-black">50+</div>
-                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Participating Teams</p>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-2xl sm:text-3xl font-black">Cash Prize</div>
-                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-white/70">Reward</p>
-                        </div>
-                    </div>
-                </div>
+                
             </section>
         </div>
     );
