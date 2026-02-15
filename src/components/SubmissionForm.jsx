@@ -91,6 +91,29 @@ export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuc
             console.log('Submission successful:', insertedData);
             setIsSubmitted(true);
             
+            // Create submission notification
+            try {
+                const { error: notificationError } = await supabase
+                    .from('notifications')
+                    .insert([{
+                        recipient_id: user.id,
+                        recipient_type: 'lead',
+                        title: 'Submission Received!',
+                        message: `Your team "${team.name}" has successfully submitted the solution for problem statement: "${problemStatement.title}". Your submission is now under review by the faculty.`,
+                        type: 'success',
+                        is_read: false,
+                        sender_type: 'system',
+                        team_id: team.id
+                    }]);
+
+                if (notificationError) {
+                    console.error('Error creating submission notification:', notificationError);
+                }
+            } catch (notifError) {
+                console.error('Notification error:', notifError);
+                // Don't fail the submission if notification fails
+            }
+            
             // Call the success callback with the submission data
             if (onSubmitSuccess) {
                 onSubmitSuccess(insertedData);

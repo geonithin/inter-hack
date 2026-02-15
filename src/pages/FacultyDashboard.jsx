@@ -495,6 +495,41 @@ export default function FacultyDashboard() {
                 statusColor
             );
 
+            // Create notification for the team about their status change
+            if (teamBeingUpdated?.lead_id && (newStatus === 'Selected' || newStatus === 'Rejected')) {
+                try {
+                    const notificationMessage = newStatus === 'Selected'
+                        ? `Congratulations! Your team "${teamBeingUpdated.name}" has been selected for the hackathon. Keep working on your solution and submit your final idea through the dashboard.`
+                        : `We regret to inform you that your team "${teamBeingUpdated.name}" was not selected for this round. Thank you for your participation and we encourage you to try again in future events.`;
+                    
+                    const notificationTitle = newStatus === 'Selected'
+                        ? '🎉 Team Selected!'
+                        : 'Team Status Update';
+                    
+                    const { error: notificationError } = await supabase
+                        .from('notifications')
+                        .insert([{
+                            recipient_id: teamBeingUpdated.lead_id,
+                            recipient_type: 'lead',
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            type: newStatus === 'Selected' ? 'success' : 'info',
+                            is_read: false,
+                            sender_type: 'faculty',
+                            team_id: teamId
+                        }]);
+
+                    if (notificationError) {
+                        console.error('Error creating status change notification:', notificationError);
+                    } else {
+                        console.log('Status change notification sent to team');
+                    }
+                } catch (notifError) {
+                    console.error('Notification error:', notifError);
+                    // Don't fail the status update if notification fails
+                }
+            }
+
             // Refresh data to ensure consistency with database
             setTimeout(fetchData, 1000); // Small delay to ensure all DB operations complete
             

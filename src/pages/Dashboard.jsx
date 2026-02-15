@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell } from 'lucide-react';
+import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SubmissionForm from '../components/SubmissionForm';
 import { supabase } from '../lib/supabase';
@@ -146,6 +146,29 @@ export default function Dashboard() {
         loadDashboardData();
         fetchNotifications();
     }, [isAuthenticated, user]);
+
+    // Handle browser back button for submission view
+    useEffect(() => {
+        const handlePopState = (event) => {
+            if (hasSelected) {
+                // If we're in submission view and user clicks back, return to statement list
+                setHasSelected(false);
+                event.preventDefault();
+            }
+        };
+
+        // When hasSelected becomes true, push a new history state
+        if (hasSelected) {
+            window.history.pushState({ submissionView: true }, '', window.location.pathname);
+        }
+
+        // Listen for back button
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [hasSelected]);
 
     // Show notification toast
     const showNotification = (message, type = 'success') => {
@@ -322,20 +345,31 @@ export default function Dashboard() {
             setIsConfirming(null);
             setTeam({ ...team, selected_statement_id: isConfirming.id });
             
+            // Check if this is switching from another statement
+            const isSwitching = selectedStatement && selectedStatement.id !== isConfirming.id;
+            
             // Show success notification
             showNotification(`Problem statement "${isConfirming.title}" selected successfully!`, 'success');
             
             // Create notification record
             if (user?.id && team?.id) {
                 try {
+                    const notificationMessage = isSwitching 
+                        ? `Your team "${team.name || 'Your team'}" has switched to a new problem statement: "${isConfirming.title}". Your previous selection was: "${selectedStatement.title}".`
+                        : `Your team "${team.name || 'Your team'}" has successfully selected the problem statement: "${isConfirming.title}". You can now start working on your solution!`;
+                    
+                    const notificationTitle = isSwitching 
+                        ? 'Problem Statement Changed!' 
+                        : 'Problem Statement Selected!';
+                    
                     const { error: notificationError } = await supabase
                         .from('notifications')
                         .insert([{
                             recipient_id: user.id,
-                            recipient_type: 'team',
-                            title: 'Problem Statement Selected!',
-                            message: `Your team "${team.name || 'Your team'}" has successfully selected the problem statement: "${isConfirming.title}". You can now start working on your solution!`,
-                            type: 'info',
+                            recipient_type: 'lead',
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            type: isSwitching ? 'warning' : 'info',
                             is_read: false,
                             sender_type: 'system',
                             team_id: team.id
@@ -371,19 +405,6 @@ export default function Dashboard() {
     if (selectedStatement && hasSelected) {
         return (
             <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200 px-4 overflow-x-hidden">
-                {/* Back Button */}
-                <div className="flex justify-start mb-4">
-                    <button
-                        onClick={() => {
-                            setHasSelected(false);
-                            setSelectedStatement(null);
-                        }}
-                        className="text-[10px] sm:text-xs font-black text-oxford uppercase border border-oxford px-3 py-1.5 rounded-lg hover:bg-oxford hover:text-white transition-all shadow-sm active:scale-95 tracking-widest bg-white"
-                    >
-                        ← Back to Problem Statements
-                    </button>
-                </div>
-
                 {/* Enhanced Problem Statement View */}
                 <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl border border-oxford/15 shadow-lg transition-all p-6">
                     {/* Header */}
@@ -623,6 +644,50 @@ export default function Dashboard() {
                     </div>
                 ))}
             </div>
+
+            {/* Current Selected Statement - Compact Display */}
+            {selectedStatement && (
+                <div className="bg-gradient-to-br from-emerald-50 via-green-50 to-white border-4 border-emerald-500 rounded-2xl p-5 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="p-2 bg-emerald-500 rounded-full shrink-0">
+                                <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-sm font-black text-emerald-600 uppercase tracking-tight mb-1">
+                                    Your Current Selected Statement
+                                </h2>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-2 py-1 bg-emerald-500 text-white text-xs font-black rounded uppercase tracking-widest shrink-0">
+                                        {selectedStatement.dept}
+                                    </span>
+                                    <h3 className="text-base sm:text-lg font-black text-oxford">
+                                        {selectedStatement.title}
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-3 shrink-0">
+                            {!hasSubmittedIdea && (
+                                <button
+                                    onClick={() => setHasSelected(true)}
+                                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold uppercase text-sm hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Submit Your Idea
+                                </button>
+                            )}
+                            {hasSubmittedIdea && (
+                                <div className="px-5 py-2.5 bg-green-100 border-2 border-green-400 rounded-xl font-bold uppercase text-sm text-green-700 flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Idea Submitted
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex items-center justify-center pt-4">

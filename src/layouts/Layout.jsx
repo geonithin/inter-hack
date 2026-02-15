@@ -464,17 +464,8 @@ export default function Layout() {
                 <div className="container-wide pt-2 sm:pt-3 animate-in fade-in slide-in-from-left-4 duration-200">
                     <button
                         onClick={() => {
-                            // Deterministic back navigation based on current route
-                            const path = location.pathname;
-                            if (path.startsWith('/faculty/team/')) {
-                                navigate('/faculty');
-                            } else if (path === '/faculty' || path === '/dashboard' || path === '/admin') {
-                                navigate('/');
-                            } else if (path === '/login' || path === '/register') {
-                                navigate('/');
-                            } else {
-                                navigate('/');
-                            }
+                            // Navigate to previous page in history
+                            navigate(-1);
                         }}
                         className="p-2 sm:p-3 bg-oxford/5 rounded-xl sm:rounded-2xl text-oxford/40 hover:text-oxford hover:bg-oxford/10 transition-all active:scale-90 group inline-flex items-center justify-center shadow-sm border border-oxford/5"
                         title="Go Back"

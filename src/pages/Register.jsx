@@ -212,7 +212,7 @@ export default function Register() {
                     .from('notifications')
                     .insert([{
                         recipient_id: userId,
-                        recipient_type: 'team',
+                        recipient_type: 'lead',
                         title: 'Welcome to SMCE Hackathon!',
                         message: `Congratulations ${teamData.name}! Your team has been successfully registered for the hackathon. You can now browse and select problem statements from your dashboard.`,
                         type: 'info',
