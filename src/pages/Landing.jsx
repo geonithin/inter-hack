@@ -164,6 +164,29 @@ export default function Landing() {
                     </p>
                     
                 </div>
+
+                {/* IMPORTANT RE-REGISTRATION NOTICE */}
+                <div className="relative z-20 mx-auto max-w-5xl px-4 mt-8 sm:mt-10">
+                    <div className="bg-red-50 border-4 border-red-600 rounded-2xl p-4 sm:p-6 shadow-2xl animate-blink-border">
+                        <div className="flex items-center justify-center gap-3 mb-3">
+                            <div className="bg-red-600 rounded-full p-2 animate-pulse">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg sm:text-2xl font-black text-red-600 uppercase tracking-tight">
+                                Important Notice
+                            </h3>
+                        </div>
+                        <p className="text-sm sm:text-lg font-bold text-red-800 text-center leading-relaxed">
+                            Teams who have already registered are kindly requested to re-register again due to system updates. We apologize for the inconvenience.
+                        </p>
+                        <p className="text-xs sm:text-sm font-semibold text-red-600 text-center mt-2">
+                            This is a temporary requirement to ensure all team data is properly stored.
+                        </p>
+                    </div>
+                </div>
+
                 <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed mt-12 sm:mt-16">
                     INNOTECH CHALLENGE'26 <br className="hidden sm:block" />
                 </p>

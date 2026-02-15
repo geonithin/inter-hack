@@ -162,7 +162,7 @@ export default function Dashboard() {
             const { data, error } = await supabase
                 .from('notifications')
                 .select('*')
-                .eq('recipient_id', user.id.toString())  // Convert to string
+                .eq('recipient_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
@@ -190,7 +190,7 @@ export default function Dashboard() {
                 .from('notifications')
                 .update({ is_read: true })
                 .eq('id', notificationId)
-                .eq('recipient_id', user.id.toString());
+                .eq('recipient_id', user.id);
 
             if (error) throw error;
 
@@ -226,7 +226,7 @@ export default function Dashboard() {
             const { error } = await supabase
                 .from('notifications')
                 .update({ is_read: true })
-                .eq('recipient_id', user.id.toString())
+                .eq('recipient_id', user.id)
                 .in('id', unreadNotificationIds);
 
             if (error) throw error;

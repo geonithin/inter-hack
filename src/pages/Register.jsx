@@ -66,19 +66,35 @@ export default function Register() {
             return;
         }
 
-        const allRegNumbers = [leadData.registerNumber, ...members.map(m => m.registerNumber)];
-        if (allRegNumbers.some(n => n === '')) {
-            alert("All registration numbers must be filled!");
+        // Check if any member has partial data (some fields filled but not all)
+        const hasPartialMemberData = members.some(m => {
+            const hasAnyData = m.name || m.registerNumber || m.email || m.phone;
+            const hasCompleteData = m.name && m.name.trim() !== '' && 
+                                   m.registerNumber && m.registerNumber.trim() !== '' &&
+                                   m.email && m.email.trim() !== '' &&
+                                   m.phone && m.phone.trim() !== '';
+            return hasAnyData && !hasCompleteData;
+        });
+
+        if (hasPartialMemberData) {
+            alert("Please complete all member details (Name, Register Number, Email, and Phone are required) or leave all fields empty to register without a team member.");
             return;
         }
 
+        // Filter valid members (those with name and register number filled)
+        const validMembers = members.filter(m => 
+            m.name && m.name.trim() !== '' && 
+            m.registerNumber && m.registerNumber.trim() !== ''
+        );
+
+        const allRegNumbers = [leadData.registerNumber, ...validMembers.map(m => m.registerNumber)];
         const uniqueRegNumbers = new Set(allRegNumbers);
         if (uniqueRegNumbers.size !== allRegNumbers.length) {
             alert("Each team member (including Lead) must have a unique register number!");
             return;
         }
 
-        const allEmails = [leadData.email, ...members.map(m => m.email)];
+        const allEmails = [leadData.email, ...validMembers.map(m => m.email).filter(e => e && e.trim() !== '')];
         if (new Set(allEmails).size !== allEmails.length) {
             alert("Each member must have a unique email!");
             return;
@@ -155,9 +171,15 @@ export default function Register() {
             console.log('Team created successfully:', teamRecord);
 
             // 4. Create Members
-            if (members.length > 0) {
+            // Filter out empty members (must have both name and register number)
+            const validMembers = members.filter(m => 
+                m.name && m.name.trim() !== '' && 
+                m.registerNumber && m.registerNumber.trim() !== ''
+            );
+
+            if (validMembers.length > 0) {
                 console.log('Creating team members...');
-                const membersToInsert = members.map(m => ({
+                const membersToInsert = validMembers.map(m => ({
                     team_id: teamRecord.id,
                     name: m.name,
                     register_number: m.registerNumber,
@@ -179,6 +201,8 @@ export default function Register() {
                     throw membersError;
                 }
                 console.log('Members created successfully');
+            } else {
+                console.log('No valid members to insert (team lead only)');
             }
 
             // 5. Create welcome notification
@@ -310,8 +334,9 @@ export default function Register() {
                             {/* Team Member Section */}
                             <div className="space-y-6 bg-oxford/5 p-6 rounded-2xl border-2 border-oxford/10">
                                 <h3 className="text-lg font-bold text-oxford uppercase border-b-2 border-oxford/10 pb-2 flex items-center gap-2">
-                                    <Users className="w-5 h-5" /> Team Member
+                                    <Users className="w-5 h-5" /> Team Member (Optional)
                                 </h3>
+                                <p className="text-xs text-oxford/60 font-semibold -mt-2">Leave empty to register as a solo team</p>
                                 <div className="space-y-6">
                                     {members.slice(0, 1).map((member, idx) => (
                                         <div key={idx} className="space-y-4 p-6 bg-white rounded-xl border-2 border-oxford/10">
@@ -320,7 +345,6 @@ export default function Register() {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Full Name</label>
                                                         <input
-                                                            required
                                                             value={member.name}
                                                             onChange={(e) => handleMemberChange(idx, 'name', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -330,7 +354,6 @@ export default function Register() {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Register No</label>
                                                         <input
-                                                            required
                                                             value={member.registerNumber}
                                                             onChange={(e) => handleMemberChange(idx, 'registerNumber', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -341,7 +364,6 @@ export default function Register() {
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Email</label>
                                                         <input
                                                             type="email"
-                                                            required
                                                             value={member.email}
                                                             onChange={(e) => handleMemberChange(idx, 'email', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -351,7 +373,6 @@ export default function Register() {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Phone</label>
                                                         <input
-                                                            required
                                                             value={member.phone}
                                                             onChange={(e) => handleMemberChange(idx, 'phone', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -361,7 +382,6 @@ export default function Register() {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Department</label>
                                                         <input
-                                                            required
                                                             value={member.department}
                                                             onChange={(e) => handleMemberChange(idx, 'department', e.target.value)}
                                                             className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -372,7 +392,6 @@ export default function Register() {
                                                         <div className="space-y-2">
                                                             <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Year</label>
                                                             <input
-                                                                required
                                                                 value={member.year}
                                                                 onChange={(e) => handleMemberChange(idx, 'year', e.target.value)}
                                                                 className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
@@ -382,7 +401,6 @@ export default function Register() {
                                                         <div className="space-y-2">
                                                             <label className="text-xs font-black text-oxford uppercase tracking-widest pl-1">Section</label>
                                                             <input
-                                                                required
                                                                 value={member.section}
                                                                 onChange={(e) => handleMemberChange(idx, 'section', e.target.value)}
                                                                 className="w-full p-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-bold text-sm"
