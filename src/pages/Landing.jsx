@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Mail, Instagram, Linkedin, Send, CheckCircle, Phone, MapPin, Globe } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Instagram, Linkedin, Send, CheckCircle, Phone, MapPin, Globe, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Landing() {
@@ -9,6 +9,16 @@ export default function Landing() {
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState(null);
+    const [showNotice, setShowNotice] = useState(true);
+
+    // Auto-hide notice after 5 seconds
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowNotice(false);
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -166,26 +176,40 @@ export default function Landing() {
                 </div>
 
                 {/* IMPORTANT RE-REGISTRATION NOTICE */}
-                <div className="relative z-20 mx-auto max-w-5xl px-4 mt-8 sm:mt-10">
-                    <div className="bg-red-50 border-4 border-red-600 rounded-2xl p-4 sm:p-6 shadow-2xl animate-blink-border">
-                        <div className="flex items-center justify-center gap-3 mb-3">
-                            <div className="bg-red-600 rounded-full p-2 animate-pulse">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
+                {showNotice && (
+                    <div className="relative z-20 mx-auto max-w-5xl px-4 mt-8 sm:mt-10 animate-in fade-in duration-300">
+                        <div className="bg-red-50 border-4 border-red-600 rounded-2xl p-4 sm:p-6 shadow-2xl animate-blink-border relative">
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setShowNotice(false)}
+                                className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all active:scale-95 shadow-md z-10"
+                                aria-label="Close notice"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            
+                            <div className="flex items-center justify-center gap-3 mb-3">
+                                <div className="bg-red-600 rounded-full p-2 animate-pulse">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg sm:text-2xl font-black text-red-600 uppercase tracking-tight">
+                                    Important Notice
+                                </h3>
                             </div>
-                            <h3 className="text-lg sm:text-2xl font-black text-red-600 uppercase tracking-tight">
-                                Important Notice
-                            </h3>
+                            <p className="text-sm sm:text-lg font-bold text-red-800 text-center leading-relaxed">
+                                Teams who have already registered are kindly requested to re-register again due to system updates. We apologize for the inconvenience.
+                            </p>
+                            <p className="text-xs sm:text-sm font-semibold text-red-600 text-center mt-2">
+                                This is a temporary requirement to ensure all team data is properly stored.
+                            </p>
+                            <p className="text-xs font-medium text-red-500 text-center mt-3 opacity-70">
+                                This notice will auto-close in 5 seconds
+                            </p>
                         </div>
-                        <p className="text-sm sm:text-lg font-bold text-red-800 text-center leading-relaxed">
-                            Teams who have already registered are kindly requested to re-register again due to system updates. We apologize for the inconvenience.
-                        </p>
-                        <p className="text-xs sm:text-sm font-semibold text-red-600 text-center mt-2">
-                            This is a temporary requirement to ensure all team data is properly stored.
-                        </p>
                     </div>
-                </div>
+                )}
 
                 <p className="text-sm sm:text-2xl lg:text-3xl text-oxford max-w-4xl mx-auto font-bold tracking-tight leading-relaxed mt-12 sm:mt-16">
                     INNOTECH CHALLENGE'26 <br className="hidden sm:block" />
