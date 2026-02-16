@@ -497,8 +497,10 @@ export default function FacultyDashboard() {
         { label: 'Active Statements', value: problemStatements.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'CSE Track', value: problemStatements.filter(s => s.department === 'CSE').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'AIDS Track', value: problemStatements.filter(s => s.department === 'AIDS').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-        { label: 'CIVIL Track', value: problemStatements.filter(s => s.department === 'CIVIL').length, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
         { label: 'ECE Track', value: problemStatements.filter(s => s.department === 'ECE').length, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { label: 'EEE Track', value: problemStatements.filter(s => s.department === 'EEE').length, icon: Users, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+        { label: 'MECH Track', value: problemStatements.filter(s => s.department === 'MECH').length, icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
+        { label: 'CIVIL Track', value: problemStatements.filter(s => s.department === 'CIVIL').length, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
         { label: 'MBA Track', value: problemStatements.filter(s => s.department === 'MBA').length, icon: Users, color: 'text-rose-600', bg: 'bg-rose-50' },
     ] : [
         { label: 'Messages Sent', value: sentNotifications.length, icon: Send, color: 'text-indigo-600', bg: 'bg-indigo-50' },
