@@ -46,7 +46,8 @@ export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuc
             // Prepare submission data
             const submissionData = {
                 team_id: team.id,
-                statement_id: problemStatement.id,
+                statement_id: problemStatement.isCustom ? null : problemStatement.id,
+                custom_statement_id: problemStatement.isCustom ? problemStatement.id : null,
                 title: formData.title.trim(),
                 description: formData.description.trim(),
                 tech_stack: formData.techStack.trim(),

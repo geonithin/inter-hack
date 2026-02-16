@@ -24,12 +24,13 @@ export default function FacultyDashboard() {
     const [teamMembers, setTeamMembers] = useState([]);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [currentView, setCurrentView] = useState('teams'); // 'teams', 'statements', or 'notifications'
+    const [currentView, setCurrentView] = useState('teams'); // 'teams', 'statements', 'customStatements', or 'notifications'
     const [error, setError] = useState(null);
     
     // State management
     const [teams, setTeams] = useState([]);
     const [problemStatements, setProblemStatements] = useState([]);
+    const [customStatements, setCustomStatements] = useState([]);
     
     // Notification sending state
     const [sendingNotification, setSendingNotification] = useState(false);
@@ -98,6 +99,28 @@ export default function FacultyDashboard() {
             }
             
             setProblemStatements(statementsData);
+            
+            // Fetch custom problem statements
+            let customStatementsData = [];
+            try {
+                const { data, error: customError } = await supabase
+                    .from('custom_problem_statements')
+                    .select(`
+                        *,
+                        teams(name, department, year, section)
+                    `)
+                    .order('created_at', { ascending: false });
+                    
+                if (customError && customError.code !== '42P01') {
+                    console.error('Custom statements error:', customError);
+                } else {
+                    customStatementsData = data || [];
+                }
+            } catch (err) {
+                console.warn('Could not fetch custom statements:', err.message);
+            }
+            
+            setCustomStatements(customStatementsData);
             
             // Fetch teams and their related data separately for reliability
             let teamsData = [];
@@ -502,6 +525,10 @@ export default function FacultyDashboard() {
         { label: 'MECH Track', value: problemStatements.filter(s => s.department === 'MECH').length, icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
         { label: 'CIVIL Track', value: problemStatements.filter(s => s.department === 'CIVIL').length, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
         { label: 'MBA Track', value: problemStatements.filter(s => s.department === 'MBA').length, icon: Users, color: 'text-rose-600', bg: 'bg-rose-50' },
+    ] : currentView === 'customStatements' ? [
+        { label: 'Total Custom', value: customStatements.length, icon: Plus, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'CSE', value: customStatements.filter(s => s.department === 'CSE').length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'AIDS', value: customStatements.filter(s => s.department === 'AIDS').length, icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
     ] : [
         { label: 'Messages Sent', value: sentNotifications.length, icon: Send, color: 'text-indigo-600', bg: 'bg-indigo-50' },
         { label: 'Total Recipients', value: teams.length, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -707,45 +734,59 @@ export default function FacultyDashboard() {
                         </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-4">
+                    <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-4 w-full sm:w-auto min-w-0">
                         {/* View Toggle */}
-                        <div className="flex bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border-2 border-oxford/15 shadow-lg">
-                            <button
-                                onClick={() => setCurrentView('teams')}
-                                className={cn(
-                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
-                                    currentView === 'teams' 
-                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
-                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
-                                )}
-                            >
-                                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                                Teams
-                            </button>
-                            <button
-                                onClick={() => setCurrentView('statements')}
-                                className={cn(
-                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
-                                    currentView === 'statements' 
-                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
-                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
-                                )}
-                            >
-                                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                                Statements
-                            </button>
-                            <button
-                                onClick={() => setCurrentView('notifications')}
-                                className={cn(
-                                    "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
-                                    currentView === 'notifications' 
-                                        ? "bg-oxford text-white shadow-lg transform scale-105" 
-                                        : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
-                                )}
-                            >
-                                <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
-                                Messages
-                            </button>
+                        <div className="w-full sm:w-auto overflow-x-auto scrollbar-thin sm:overflow-visible min-w-0">
+                            <div className="inline-flex bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border-2 border-oxford/15 shadow-lg whitespace-nowrap">
+                                <button
+                                    onClick={() => setCurrentView('teams')}
+                                    className={cn(
+                                        "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                        currentView === 'teams' 
+                                            ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                            : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                    )}
+                                >
+                                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    Teams
+                                </button>
+                                <button
+                                    onClick={() => setCurrentView('statements')}
+                                    className={cn(
+                                        "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                        currentView === 'statements' 
+                                            ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                            : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                    )}
+                                >
+                                    <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    Statements
+                                </button>
+                                <button
+                                    onClick={() => setCurrentView('customStatements')}
+                                    className={cn(
+                                        "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                        currentView === 'customStatements' 
+                                            ? "bg-emerald-600 text-white shadow-lg transform scale-105" 
+                                            : "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                    )}
+                                >
+                                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    Custom
+                                </button>
+                                <button
+                                    onClick={() => setCurrentView('notifications')}
+                                    className={cn(
+                                        "px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2",
+                                        currentView === 'notifications' 
+                                            ? "bg-oxford text-white shadow-lg transform scale-105" 
+                                            : "text-oxford/50 hover:text-oxford hover:bg-oxford/5"
+                                    )}
+                                >
+                                    <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    Messages
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1003,6 +1044,70 @@ export default function FacultyDashboard() {
                                             <div className="space-y-2">
                                                 <FileText className="w-8 h-8 mx-auto opacity-30" />
                                                 <p className="font-black uppercase tracking-widest">No statements found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : currentView === 'customStatements' ? (
+                /* Custom Problem Statements View */
+                <div className="oxford-edge rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border-transparent">
+                    <div className="overflow-x-auto text-[10px] sm:text-xs">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-emerald-600 text-white border-b-4 border-emerald-700">
+                                <tr className="font-black uppercase tracking-[0.2em]">
+                                    <th className="p-5">Team</th>
+                                    <th className="p-5 border-l-2 border-white/10">Title & Description</th>
+                                    <th className="p-5 border-l-2 border-white/10">Department</th>
+                                    <th className="p-5 border-l-2 border-white/10">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y-2 divide-oxford/10">
+                                {customStatements.length > 0 ? customStatements.map((statement) => {
+                                    return (
+                                        <tr key={statement.id} className="hover:bg-emerald-50/30 transition-colors group">
+                                            <td className="p-5 sm:p-6">
+                                                <p className="font-black text-oxford uppercase tracking-tight">
+                                                    {statement.teams?.name || 'Unknown Team'}
+                                                </p>
+                                                <p className="text-[9px] text-oxford/60 mt-1">
+                                                    {statement.teams?.department} • Year {statement.teams?.year} • Sec {statement.teams?.section}
+                                                </p>
+                                            </td>
+                                            <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
+                                                <p className="font-black text-oxford uppercase tracking-tight line-clamp-1">
+                                                    {statement.title}
+                                                </p>
+                                                <p className="text-[9px] text-oxford/60 mt-1 line-clamp-2">
+                                                    {statement.description}
+                                                </p>
+                                            </td>
+                                            <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
+                                                <span className="px-3 py-1 bg-emerald-50 border-2 border-emerald-200 rounded-lg font-black text-emerald-700 uppercase text-[9px]">
+                                                    {statement.department}
+                                                </span>
+                                            </td>
+                                            <td className="p-5 sm:p-6 border-l-2 border-oxford/10">
+                                                <p className="text-[9px] text-oxford/60">
+                                                    {new Date(statement.created_at).toLocaleDateString('en-US', { 
+                                                        month: 'short', 
+                                                        day: 'numeric', 
+                                                        year: 'numeric' 
+                                                    })}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
+                                    <tr>
+                                        <td colSpan="4" className="p-12 text-center text-oxford/40">
+                                            <div className="space-y-2">
+                                                <Plus className="w-8 h-8 mx-auto opacity-30" />
+                                                <p className="font-black uppercase tracking-widest">No custom statements found</p>
+                                                <p className="text-[9px]">Teams haven't created custom statements yet</p>
                                             </div>
                                         </td>
                                     </tr>

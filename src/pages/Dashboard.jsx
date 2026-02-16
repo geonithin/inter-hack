@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell, FileText } from 'lucide-react';
+import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell, FileText, Plus, Send } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SubmissionForm from '../components/SubmissionForm';
+import CustomStatementModal from '../components/CustomStatementModal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -9,12 +10,16 @@ export default function Dashboard() {
     const { user, isAuthenticated } = useAuth();
     const [team, setTeam] = useState(null);
     const [problemStatements, setProblemStatements] = useState([]);
+    const [customStatement, setCustomStatement] = useState(null);
     const [selectedStatement, setSelectedStatement] = useState(null);
     const [isConfirming, setIsConfirming] = useState(null);
     const [hasSelected, setHasSelected] = useState(false);
     const [filterDept, setFilterDept] = useState('All');
     const [isLoading, setIsLoading] = useState(true);
     const [expandedRow, setExpandedRow] = useState(null);
+    
+    // Custom statement modal
+    const [isCustomStatementModalOpen, setIsCustomStatementModalOpen] = useState(false);
     
     // Notification system
     const [notification, setNotification] = useState(null);
@@ -165,6 +170,20 @@ export default function Dashboard() {
                                 setSubmissionData(submissions[0]);
                                 console.log('Team has already submitted their idea:', submissions[0]);
                             }
+                            
+                            // Fetch custom statement if exists
+                            const { data: customStmt, error: customError } = await supabase
+                                .from('custom_problem_statements')
+                                .select('*')
+                                .eq('team_id', teamData.id)
+                                .maybeSingle();
+                            
+                            if (customError) {
+                                console.warn('Error fetching custom statement:', customError);
+                            } else if (customStmt) {
+                                setCustomStatement(customStmt);
+                                console.log('Team has custom statement:', customStmt);
+                            }
                         }
                     }
                 }
@@ -299,7 +318,9 @@ export default function Dashboard() {
         };
     }, [fetchNotifications]);
 
-    const filteredStatements = filterDept === 'All'
+    const filteredStatements = filterDept === 'OwnStatement'
+        ? [] // Empty array for own statement view
+        : filterDept === 'All'
         ? problemStatements
         : problemStatements.filter(s => s.dept === filterDept);
 
@@ -689,8 +710,12 @@ export default function Dashboard() {
 
             {/* Tab Navigation */}
             <div className="flex items-center justify-center pt-4">
-                <div className="flex bg-gray-50 p-1 sm:p-2 rounded-xl sm:rounded-2xl border-2 border-oxford/10 overflow-x-auto">
+                <div className="flex bg-gray-50 p-1 sm:p-2 rounded-xl sm:rounded-2xl border-2 border-oxford/10 overflow-x-auto scrollbar-thin sm:overflow-visible">
                     <button onClick={() => setFilterDept('All')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'All' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>All Tracks</button>
+                    <button onClick={() => setFilterDept('OwnStatement')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2", filterDept === 'OwnStatement' ? "bg-emerald-600 text-white shadow-lg" : "text-emerald-700 hover:text-emerald-800")}>
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        Own Statement
+                    </button>
                     <button onClick={() => setFilterDept('CSE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CSE' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>CSE</button>
                     <button onClick={() => setFilterDept('AIDS')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'AIDS' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>AIDS</button>
                     <button onClick={() => setFilterDept('CIVIL')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CIVIL' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>CIVIL</button>
@@ -702,6 +727,100 @@ export default function Dashboard() {
             </div>
 
             {/* Problem Statements Grid */}
+            {filterDept === 'OwnStatement' ? (
+                /* Own Statement View */
+                <div className="grid gap-4">
+                    {customStatement ? (
+                        /* Display existing custom statement */
+                        <div className="bg-white rounded-xl sm:rounded-2xl border-2 shadow-lg overflow-hidden">
+                            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-4 sm:p-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/20 rounded-lg">
+                                        <FileText className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
+                                            Your Custom Statement
+                                        </h3>
+                                        <p className="text-xs text-white/80 font-bold uppercase tracking-widest mt-1">
+                                            ✓ Ready to use
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 sm:p-6 space-y-4">
+                                <div>
+                                    <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-lg uppercase mb-3">
+                                        {customStatement.department}
+                                    </span>
+                                    <h4 className="text-xl font-black text-oxford mb-3">{customStatement.title}</h4>
+                                    <p className="text-oxford/70 leading-relaxed">{customStatement.description}</p>
+                                </div>
+                                
+                                {!hasSubmittedIdea && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedStatement({
+                                                id: customStatement.id,
+                                                title: customStatement.title,
+                                                description: customStatement.description,
+                                                dept: customStatement.department,
+                                                isCustom: true
+                                            });
+                                            setHasSelected(true);
+                                        }}
+                                        className="w-full px-6 py-4 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <Send className="w-5 h-5" />
+                                        Submit Your Solution
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        /* Create new custom statement prompt */
+                        <div className="bg-white rounded-xl sm:rounded-2xl border-2 border-dashed border-oxford/30 shadow-lg p-8 sm:p-12 text-center">
+                            <div className="max-w-2xl mx-auto space-y-6">
+                                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                                    <Plus className="w-8 h-8 text-emerald-600" />
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <h3 className="text-2xl font-black text-oxford uppercase tracking-tight">
+                                        Create Your Own Problem Statement
+                                    </h3>
+                                    <p className="text-oxford/60 max-w-xl mx-auto">
+                                        Can't find a suitable problem statement? Define your own unique challenge that your team wants to solve. You can start working on it immediately after creation!
+                                    </p>
+                                </div>
+                                
+                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 text-left">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-bold text-blue-900">What you'll need:</p>
+                                            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                                                <li>A clear and concise problem statement title</li>
+                                                <li>Detailed description of the problem (minimum 20 characters)</li>
+                                                <li>Department classification</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    onClick={() => setIsCustomStatementModalOpen(true)}
+                                    className="px-8 py-4 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg flex items-center justify-center gap-3 mx-auto"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Create Custom Statement
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : (
             <div className="grid gap-4">
                 {filteredStatements.map((statement) => {
                     const isSelected = selectedStatement?.id === statement.id;
@@ -843,6 +962,7 @@ export default function Dashboard() {
                     );
                 })}
             </div>
+            )}
 
             {/* Confirmation Modal */}
             {isConfirming && (
@@ -1128,6 +1248,17 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Custom Statement Modal */}
+            <CustomStatementModal
+                isOpen={isCustomStatementModalOpen}
+                onClose={() => setIsCustomStatementModalOpen(false)}
+                onSuccess={(newStatement) => {
+                    setCustomStatement(newStatement);
+                    showNotification('Custom statement created! Awaiting faculty approval.', 'success');
+                }}
+                teamData={team}
+            />
         </div>
     );
 }
