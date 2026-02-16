@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Send, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
 export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuccess }) {
@@ -193,7 +192,7 @@ export default function SubmissionForm({ problemStatement, onCancel, onSubmitSuc
                             value={formData.solutionLink}
                             onChange={(e) => setFormData({ ...formData, solutionLink: e.target.value })}
                             className="w-full p-4 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none font-bold transition-all"
-                            placeholder="GitHub or Figma link"
+                            placeholder="e.g. GitHub repo, Figma design or a pdf link"
                         />
                     </div>
                 </div>

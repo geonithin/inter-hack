@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Lock, Clock, Users, ChevronRight, ChevronDown, CheckCircle, AlertCircle, X, XCircle, AlertTriangle, CheckCircle2, Bell, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SubmissionForm from '../components/SubmissionForm';
@@ -7,7 +6,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
-    const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
     const [team, setTeam] = useState(null);
     const [problemStatements, setProblemStatements] = useState([]);
@@ -27,6 +25,40 @@ export default function Dashboard() {
     // Submission tracking
     const [hasSubmittedIdea, setHasSubmittedIdea] = useState(false);
     const [submissionData, setSubmissionData] = useState(null);
+
+    // Show notification toast
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 4000);
+    };
+
+    // Fetch notifications - simplified without real-time
+    const fetchNotifications = useCallback(async () => {
+        if (!user) return;
+        
+        try {
+            console.log('Fetching notifications for user:', user.id);
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('recipient_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (error) {
+                console.error('Error fetching notifications:', error);
+                return;
+            }
+
+            console.log('Fetched notifications:', data);
+            setNotifications(data || []);
+            const unread = (data || []).filter(n => !n.is_read).length;
+            setUnreadCount(unread);
+            console.log('Unread count:', unread);
+        } catch (error) {
+            console.error('Error in fetchNotifications:', error);
+        }
+    }, [user]);
 
     useEffect(() => {
         const loadDashboardData = async () => {
@@ -145,7 +177,7 @@ export default function Dashboard() {
 
         loadDashboardData();
         fetchNotifications();
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, fetchNotifications]);
 
     // Handle browser back button for submission view
     useEffect(() => {
@@ -169,40 +201,6 @@ export default function Dashboard() {
             window.removeEventListener('popstate', handlePopState);
         };
     }, [hasSelected]);
-
-    // Show notification toast
-    const showNotification = (message, type = 'success') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 4000);
-    };
-
-    // Fetch notifications - simplified without real-time
-    const fetchNotifications = async () => {
-        if (!user) return;
-        
-        try {
-            console.log('Fetching notifications for user:', user.id);
-            const { data, error } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('recipient_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            if (error) {
-                console.error('Error fetching notifications:', error);
-                return;
-            }
-
-            console.log('Fetched notifications:', data);
-            setNotifications(data || []);
-            const unread = (data || []).filter(n => !n.is_read).length;
-            setUnreadCount(unread);
-            console.log('Unread count:', unread);
-        } catch (error) {
-            console.error('Error in fetchNotifications:', error);
-        }
-    };
 
     // Mark notification as read
     const markAsRead = async (notificationId) => {
@@ -282,7 +280,7 @@ export default function Dashboard() {
         return () => {
             clearInterval(interval);
         };
-    }, [user]);
+    }, [user, fetchNotifications]);
 
     // Listen for global notification updates (when marked as read in other components)
     useEffect(() => {
@@ -299,7 +297,7 @@ export default function Dashboard() {
         return () => {
             window.removeEventListener('notificationUpdate', handleNotificationUpdate);
         };
-    }, [user]); // Added user dependency so fetchNotifications is available
+    }, [fetchNotifications]);
 
     const filteredStatements = filterDept === 'All'
         ? problemStatements
@@ -483,7 +481,7 @@ export default function Dashboard() {
                                 <Filter className="w-4 h-4 text-oxford" />
                             </div>
                             <h4 className="text-xs font-black text-oxford uppercase tracking-widest mb-1">Competition Level</h4>
-                            <p className="text-oxford font-bold text-sm">Inter-College</p>
+                            <p className="text-oxford font-bold text-sm">Intra-College</p>
                         </div>
                     </div>
                 </div>
@@ -695,8 +693,10 @@ export default function Dashboard() {
                     <button onClick={() => setFilterDept('All')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'All' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>All Tracks</button>
                     <button onClick={() => setFilterDept('CSE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CSE' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>CSE</button>
                     <button onClick={() => setFilterDept('AIDS')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'AIDS' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>AIDS</button>
+                    <button onClick={() => setFilterDept('CIVIL')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'CIVIL' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>CIVIL</button>
                     <button onClick={() => setFilterDept('ECE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'ECE' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>ECE</button>
                     <button onClick={() => setFilterDept('EEE')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'EEE' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>EEE</button>
+                    <button onClick={() => setFilterDept('MBA')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'MBA' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>MBA</button>
                     <button onClick={() => setFilterDept('MECH')} className={cn("px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all whitespace-nowrap", filterDept === 'MECH' ? "bg-oxford text-white shadow-lg" : "text-oxford/70 hover:text-oxford")}>MECH</button>
                 </div>
             </div>
@@ -1036,7 +1036,7 @@ export default function Dashboard() {
                                             <div className="flex items-start space-x-3">
                                                 {/* Icon Card */}
                                                 <div className={cn(
-                                                    "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+                                                    "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
                                                     notif.is_read 
                                                         ? "bg-gray-100" 
                                                         : "bg-oxford text-white"

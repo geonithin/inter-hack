@@ -23,7 +23,6 @@ export default function FacultyDashboard() {
     const [selectedStatement, setSelectedStatement] = useState(null);
     const [teamMembers, setTeamMembers] = useState([]);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-    const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState('teams'); // 'teams', 'statements', or 'notifications'
     const [error, setError] = useState(null);
@@ -64,20 +63,8 @@ export default function FacultyDashboard() {
             console.log('Waiting for user authentication...');
             setIsLoading(true);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
-    
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            // Check if clicked element is not part of any status dropdown
-            if (!event.target.closest('.status-dropdown-container')) {
-                setOpenStatusDropdown(null);
-            }
-        };
-        
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
     
     const fetchData = async () => {
         setIsLoading(true);
@@ -374,174 +361,6 @@ export default function FacultyDashboard() {
         setTimeout(() => setNotification(null), 4000);
     };
 
-    const handleStatusUpdate = async (teamId, newStatus) => {
-        try {
-            console.log('Updating status for team:', teamId, 'to:', newStatus);
-            
-            // Debug: Check current user authentication details
-            console.log('=== DEBUGGING STATUS UPDATE ===');
-            try {
-                const { data: debugInfo, error: debugError } = await supabase.rpc('debug_current_user');
-                if (debugError) {
-                    console.error('Debug function error:', debugError);
-                } else {
-                    console.log('Debug - Current user info:', debugInfo);
-                }
-            } catch (debugError) {
-                console.log('Debug function call failed:', debugError);
-            }
-            
-            // Check Supabase auth status
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
-            console.log('Supabase auth user:', currentUser);
-            
-            // Test basic database connectivity
-            const { data: testData, error: testError } = await supabase
-                .from('teams')
-                .select('id, name, status')
-                .limit(1);
-            console.log('Basic database test:', { testData, testError });
-            
-            console.log('=== END DEBUGGING ===');
-            
-            // Find the team being updated
-            const teamBeingUpdated = teams.find(t => t.id === teamId);
-            console.log('Team being updated:', teamBeingUpdated);
-            
-            if (!teamBeingUpdated) {
-                throw new Error('Team not found');
-            }
-            
-            // Optimistic update - update local state immediately
-            setTeams(prevTeams => 
-                prevTeams.map(team => 
-                    team.id === teamId ? { ...team, status: newStatus } : team
-                )
-            );
-            
-            // Show immediate feedback
-            const statusColor = newStatus === 'Selected' ? 'success' : 
-                              newStatus === 'Rejected' ? 'error' : 'warning';
-            showNotification(
-                `Team "${teamBeingUpdated?.name}" status is being updated to ${newStatus.toLowerCase()}...`, 
-                'info'
-            );
-
-            // Update in database with better error handling
-            console.log('Updating team status in database...');
-            console.log('Current user from auth context:', user);
-            console.log('Team ID type:', typeof teamId, 'Team ID value:', teamId);
-            console.log('New status:', newStatus);
-            
-            // First, let's check if we can select this team before updating
-            console.log('Testing SELECT access first...');
-            const { data: selectTest, error: selectError } = await supabase
-                .from('teams')
-                .select('*')
-                .eq('id', teamId);
-            console.log('Select test result:', { selectTest, selectError, canReadTeam: !!selectTest?.length });
-            
-            // Now try the update
-            console.log('Attempting UPDATE operation...');
-            const updateStart = Date.now();
-            const { data, error, status, statusText } = await supabase
-                .from('teams')
-                .update({ 
-                    status: newStatus,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', teamId)
-                .select('*'); // Return the updated row to confirm it worked
-
-            const updateTime = Date.now() - updateStart;
-            console.log('Update operation completed in', updateTime, 'ms');
-            console.log('Update response details:', { 
-                data, 
-                error, 
-                status, 
-                statusText,
-                dataCount: data?.length,
-                hasData: !!data,
-                isArray: Array.isArray(data)
-            });
-
-            if (error) {
-                console.error('Database update error:', error);
-                console.error('Error details:', {
-                    code: error.code,
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint
-                });
-                throw new Error(`Failed to update status: ${error.message}`);
-            }
-            
-            if (!data || data.length === 0) {
-                console.error('No rows updated - this suggests RLS policy is blocking the update');
-                console.error('Update operation returned empty data despite no error');
-                
-                // Additional debugging queries
-                const { data: allTeams } = await supabase.from('teams').select('id, name, status').limit(5);
-                console.log('Sample of all teams we can see:', allTeams);
-                
-                throw new Error('Status update failed - no rows were affected (RLS policy issue)');
-            }
-            
-            console.log('Team status updated successfully in database:', data[0]);
-
-            // Show success notification
-            showNotification(
-                `Team "${teamBeingUpdated?.name}" has been ${newStatus.toLowerCase()}!`, 
-                statusColor
-            );
-
-            // Create notification for the team about their status change
-            if (teamBeingUpdated?.lead_id && (newStatus === 'Selected' || newStatus === 'Rejected')) {
-                try {
-                    const notificationMessage = newStatus === 'Selected'
-                        ? `Congratulations! Your team "${teamBeingUpdated.name}" has been selected for the hackathon. Keep working on your solution and submit your final idea through the dashboard.`
-                        : `We regret to inform you that your team "${teamBeingUpdated.name}" was not selected for this round. Thank you for your participation and we encourage you to try again in future events.`;
-                    
-                    const notificationTitle = newStatus === 'Selected'
-                        ? '🎉 Team Selected!'
-                        : 'Team Status Update';
-                    
-                    const { error: notificationError } = await supabase
-                        .from('notifications')
-                        .insert([{
-                            recipient_id: teamBeingUpdated.lead_id,
-                            recipient_type: 'lead',
-                            title: notificationTitle,
-                            message: notificationMessage,
-                            type: newStatus === 'Selected' ? 'success' : 'info',
-                            is_read: false,
-                            sender_type: 'faculty',
-                            team_id: teamId
-                        }]);
-
-                    if (notificationError) {
-                        console.error('Error creating status change notification:', notificationError);
-                    } else {
-                        console.log('Status change notification sent to team');
-                    }
-                } catch (notifError) {
-                    console.error('Notification error:', notifError);
-                    // Don't fail the status update if notification fails
-                }
-            }
-
-            // Refresh data to ensure consistency with database
-            setTimeout(fetchData, 1000); // Small delay to ensure all DB operations complete
-            
-        } catch (error) {
-            console.error('Error updating status:', error);
-            showNotification(`Failed to update team status: ${error.message}`, 'error');
-            
-            // Revert optimistic update on error
-            await fetchData();
-        }
-    };
-
     const handleDeleteTeam = async (id) => {
         try {
             const teamToDelete = teams.find(t => t.id === id);
@@ -678,7 +497,9 @@ export default function FacultyDashboard() {
         { label: 'Active Statements', value: problemStatements.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'CSE Track', value: problemStatements.filter(s => s.department === 'CSE').length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'AIDS Track', value: problemStatements.filter(s => s.department === 'AIDS').length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'CIVIL Track', value: problemStatements.filter(s => s.department === 'CIVIL').length, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
         { label: 'ECE Track', value: problemStatements.filter(s => s.department === 'ECE').length, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { label: 'MBA Track', value: problemStatements.filter(s => s.department === 'MBA').length, icon: Users, color: 'text-rose-600', bg: 'bg-rose-50' },
     ] : [
         { label: 'Messages Sent', value: sentNotifications.length, icon: Send, color: 'text-indigo-600', bg: 'bg-indigo-50' },
         { label: 'Total Recipients', value: teams.length, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -992,10 +813,12 @@ export default function FacultyDashboard() {
                                 className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
                             >
                                 <option value="">All Departments</option>
-                                <option value="CSE">Computer Science & Engineering</option>
                                 <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                <option value="CIVIL">Civil Engineering</option>
+                                <option value="CSE">Computer Science & Engineering</option>
                                 <option value="ECE">Electronics & Communication Engineering</option>
                                 <option value="EEE">Electrical & Electronics Engineering</option>
+                                <option value="MBA">Master of Business Administration</option>
                                 <option value="MECH">Mechanical Engineering</option>
                             </select>
                             <select
@@ -1017,10 +840,12 @@ export default function FacultyDashboard() {
                                 className="px-4 py-2.5 bg-white border-2 border-oxford/5 rounded-xl text-oxford font-black text-[9px] uppercase tracking-widest focus:border-oxford outline-none cursor-pointer"
                             >
                                 <option value="">All Departments</option>
-                                <option value="CSE">Computer Science & Engineering</option>
                                 <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                <option value="CIVIL">Civil Engineering</option>
+                                <option value="CSE">Computer Science & Engineering</option>
                                 <option value="ECE">Electronics & Communication Engineering</option>
                                 <option value="EEE">Electrical & Electronics Engineering</option>
+                                <option value="MBA">Master of Business Administration</option>
                                 <option value="MECH">Mechanical Engineering</option>
                             </select>
                             <button
@@ -1082,17 +907,14 @@ export default function FacultyDashboard() {
                                         <td className="p-5 sm:p-6 border-l-2 border-oxford/10 align-top">
                                             <p className="font-black text-oxford uppercase tracking-tight line-clamp-3 break-words">{team.statement}</p>
                                         </td>
-                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 text-center align-top">
-                                            <div className="relative status-dropdown-container">
-                                                <button 
-                                                    onClick={() => setOpenStatusDropdown(openStatusDropdown === team.id ? null : team.id)}
-                                                    className={cn(
-                                                        "inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 font-black uppercase text-[9px] tracking-widest cursor-pointer hover:scale-105 transition-all",
-                                                        team.status === 'Selected' ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" :
-                                                            team.status === 'Rejected' ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100" :
-                                                                "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                                    )}
-                                                >
+                                        <td className="p-5 sm:p-6 border-l-2 border-oxford/10 align-top">
+                                            <div className="flex justify-center">
+                                                <div className={cn(
+                                                    "inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 font-black uppercase text-[9px] tracking-widest",
+                                                    team.status === 'Selected' ? "bg-green-50 text-green-700 border-green-200" :
+                                                        team.status === 'Rejected' ? "bg-red-50 text-red-700 border-red-200" :
+                                                            "bg-amber-50 text-amber-700 border-amber-200"
+                                                )}>
                                                     <div className={cn(
                                                         "w-1.5 h-1.5 rounded-full animate-pulse",
                                                         team.status === 'Selected' ? "bg-green-500" :
@@ -1100,35 +922,7 @@ export default function FacultyDashboard() {
                                                                 "bg-amber-500"
                                                     )} />
                                                     {team.status}
-                                                </button>
-                                                
-                                                {openStatusDropdown === team.id && (
-                                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white border-2 border-oxford/10 rounded-xl shadow-lg z-50 min-w-30">
-                                                        {['Pending', 'Selected', 'Rejected'].map((status) => (
-                                                            <button
-                                                                key={status}
-                                                                onClick={() => {
-                                                                    handleStatusUpdate(team.id, status);
-                                                                    setOpenStatusDropdown(null);
-                                                                }}
-                                                                className={cn(
-                                                                    "w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest hover:bg-oxford/5 first:rounded-t-lg last:rounded-b-lg transition-all",
-                                                                    team.status === status ? "bg-oxford/10 text-oxford" : "text-oxford/70 hover:text-oxford"
-                                                                )}
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={cn(
-                                                                        "w-2 h-2 rounded-full",
-                                                                        status === 'Selected' ? "bg-green-500" :
-                                                                            status === 'Rejected' ? "bg-red-500" :
-                                                                                "bg-amber-500"
-                                                                    )} />
-                                                                    {status}
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -1324,10 +1118,12 @@ export default function FacultyDashboard() {
                                         onChange={(e) => setNotificationForm(prev => ({ ...prev, department: e.target.value }))}
                                         className="w-full px-4 py-3 border-2 border-oxford/10 rounded-xl focus:border-oxford outline-none transition-all font-medium"
                                     >
-                                        <option value="CSE">Computer Science & Engineering</option>
                                         <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                        <option value="CIVIL">Civil Engineering</option>
+                                        <option value="CSE">Computer Science & Engineering</option>
                                         <option value="ECE">Electronics & Communication Engineering</option>
                                         <option value="EEE">Electrical & Electronics Engineering</option>
+                                        <option value="MBA">Master of Business Administration</option>
                                         <option value="MECH">Mechanical Engineering</option>
                                     </select>
                                 </div>
@@ -1703,10 +1499,12 @@ export default function FacultyDashboard() {
                                         onChange={(e) => setNewStatement({ ...newStatement, department: e.target.value })}
                                         className="w-full p-2.5 sm:p-3.5 border-2 border-oxford/10 rounded-lg sm:rounded-xl focus:border-oxford outline-none font-black text-xs sm:text-sm uppercase"
                                     >
-                                        <option value="CSE">Computer Science & Engineering</option>
                                         <option value="AIDS">Artificial Intelligence & Data Science</option>
+                                        <option value="CIVIL">Civil Engineering</option>
+                                        <option value="CSE">Computer Science & Engineering</option>
                                         <option value="ECE">Electronics & Communication Engineering</option>
                                         <option value="EEE">Electrical & Electronics Engineering</option>
+                                        <option value="MBA">Master of Business Administration</option>
                                         <option value="MECH">Mechanical Engineering</option>
                                     </select>
                                 </div>

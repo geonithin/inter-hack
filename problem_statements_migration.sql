@@ -6,7 +6,7 @@ create table if not exists problem_statements (
   id serial primary key,
   title text not null,
   description text not null,
-  department text not null check (department in ('CSE', 'AIDS', 'ECE', 'EEE', 'MECH')),
+  department text not null check (department in ('CSE', 'AIDS', 'ECE', 'EEE', 'MECH', 'CIVIL', 'MBA')),
   max_teams integer default 3,
   is_active boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
