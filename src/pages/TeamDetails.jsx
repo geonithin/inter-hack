@@ -574,87 +574,83 @@ export default function TeamDetails() {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-oxford/5">
             {/* Header */}
             <div className="bg-white shadow-md border-b-4 border-oxford/20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
                     {/* Back Button */}
                     <button
                         onClick={() => navigate('/faculty')}
-                        className="mb-4 flex items-center gap-2 text-oxford/60 hover:text-oxford font-bold text-sm transition-all"
+                        className="mb-3 flex items-center gap-1.5 text-oxford/60 hover:text-oxford font-semibold text-xs sm:text-sm transition-all"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Back to Dashboard
                     </button>
                     
-                    <div className="flex items-start justify-between flex-wrap gap-6">
-                        <div className="flex-1 min-w-0">
-                            <h1 className="text-3xl sm:text-4xl font-black text-oxford uppercase tracking-tight mb-2">
+                    <div className="space-y-3">
+                        {/* Team Name and Status */}
+                        <div>
+                            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-oxford uppercase tracking-tight mb-2">
                                 {team.name}
                             </h1>
-                            <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-xs sm:text-sm">
                                 <div className={cn(
-                                    "px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-widest border-2",
+                                    "px-2.5 sm:px-3 py-1 rounded-full font-bold text-[10px] sm:text-xs uppercase tracking-wide border",
                                     team.status === 'Selected' ? "bg-green-50 text-green-700 border-green-200" :
                                         team.status === 'Rejected' ? "bg-red-50 text-red-700 border-red-200" :
                                             "bg-amber-50 text-amber-700 border-amber-200"
                                 )}>
-                                    <div className={cn(
-                                        "inline-block w-1.5 h-1.5 rounded-full mr-2 animate-pulse",
-                                        team.status === 'Selected' ? "bg-green-500" :
-                                            team.status === 'Rejected' ? "bg-red-500" : "bg-amber-500"
-                                    )} />
                                     {team.status}
                                 </div>
-                                <span className="text-sm text-oxford/50 font-bold">{team.department} | {team.year} - {team.section}</span>
+                                <span className="text-xs sm:text-sm text-oxford/50 font-medium">{team.department} | {team.year} - {team.section}</span>
                             </div>
                         </div>
                         
                         {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3">
+                        <div className="flex flex-wrap gap-2">
                             {/* Evaluation Buttons */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => openEvaluationModal('Selected')}
-                                    className="px-4 py-2 bg-green-600 text-white font-bold rounded-lg text-sm uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
-                                >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    {team.status === 'Selected' ? 'Re-Select' : 'Select'}
-                                </button>
-                                <button
-                                    onClick={() => openEvaluationModal('Rejected')}
-                                    className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg text-sm uppercase flex items-center gap-2 hover:bg-red-700 transition-all shadow-md hover:shadow-lg"
-                                >
-                                    <XCircle className="w-4 h-4" />
-                                    {team.status === 'Rejected' ? 'Re-Reject' : 'Reject'}
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => openEvaluationModal('Selected')}
+                                className="flex-1 min-w-[110px] sm:flex-none px-3 sm:px-4 py-2 bg-green-600 text-white font-semibold rounded-md text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors shadow-sm border border-green-700"
+                            >
+                                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">{team.status === 'Selected' ? 'Re-Select' : 'Select'}</span>
+                                <span className="sm:hidden">Select</span>
+                            </button>
+                            <button
+                                onClick={() => openEvaluationModal('Rejected')}
+                                className="flex-1 min-w-[110px] sm:flex-none px-3 sm:px-4 py-2 bg-red-600 text-white font-semibold rounded-md text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-red-700 transition-colors shadow-sm border border-red-700"
+                            >
+                                <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">{team.status === 'Rejected' ? 'Re-Reject' : 'Reject'}</span>
+                                <span className="sm:hidden">Reject</span>
+                            </button>
                             
-                            {/* Secondary Actions */}
-                            <div className="flex gap-2">
-                                {team.status !== 'Pending' && (
-                                    <button
-                                        onClick={handleResetToPending}
-                                        className="px-4 py-2 bg-amber-100 text-amber-700 font-bold rounded-lg text-sm uppercase hover:bg-amber-200 transition-all"
-                                    >
-                                        Reset
-                                    </button>
-                                )}
+                            {/* Secondary Actions - Grouped to stay together */}
+                            <div className="flex gap-2 w-full sm:w-auto">
                                 <button
                                     onClick={handleExportPDF}
                                     disabled={exporting}
                                     className={cn(
-                                        "px-4 py-2 bg-oxford text-white font-bold rounded-lg text-sm uppercase flex items-center gap-2 hover:bg-oxford-dark transition-all",
+                                        "flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-oxford text-white font-semibold rounded-md text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-oxford/90 transition-colors shadow-sm border border-oxford-dark",
                                         exporting && "opacity-50 cursor-not-allowed"
                                     )}
                                 >
-                                    <Download className="w-4 h-4" />
-                                    {exporting ? 'Exporting...' : 'PDF'}
+                                    <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">{exporting ? 'Exporting...' : 'PDF'}</span>
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg text-sm uppercase flex items-center gap-2 hover:bg-red-700 transition-all shadow-md hover:shadow-lg"
+                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 text-white font-semibold rounded-md text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-red-700 transition-colors shadow-sm border border-red-700"
                                 >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
+                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">Delete</span>
                                 </button>
+                                {team.status !== 'Pending' && (
+                                    <button
+                                        onClick={handleResetToPending}
+                                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-amber-100 text-amber-700 font-semibold rounded-md text-xs sm:text-sm hover:bg-amber-200 transition-colors"
+                                    >
+                                        Reset
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
